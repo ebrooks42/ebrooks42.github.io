@@ -1,7 +1,6 @@
 # Outline for Chapters 1-2 of A Project Guide to UX Design
 
 Outline author: Evan Brooks
-
 Outline date: Jan 13th, 2026
 
 # Essential Questions
