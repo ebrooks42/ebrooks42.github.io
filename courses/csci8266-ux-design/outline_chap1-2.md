@@ -1,10 +1,12 @@
-# Outline for Chapters 1-2 of A Project Guide to UX Design {: .no_toc}
+# Outline for Chapters 1-2 of A Project Guide to UX Design
+{: .no_toc}
 
 Outline author: Evan Brooks
 
 Outline date: Jan 13th, 2026
 
-# Table of Contents {: .no_toc}
+# Table of Contents
+{: .no_toc}
 
 * TOC
 {:toc}
