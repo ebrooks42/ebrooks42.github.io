@@ -4,6 +4,9 @@ Outline author: Evan Brooks
 
 Outline date: Jan 18th, 2026
 
+* TOC
+{:toc}
+
 # Essential Questions:
 ## 1. What is the role of DesignOps on a design team?
 
