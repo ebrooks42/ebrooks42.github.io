@@ -3,7 +3,7 @@
 
 Outline author: Evan Brooks
 
-Outline date: Jan 18th, 2026
+Outline date: Jan 24th, 2026
 
 # Table of Contents
 {: .no_toc}
