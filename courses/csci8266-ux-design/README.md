@@ -13,4 +13,4 @@
 
 ## Group Projects
 
-- [Group Project: Mavlink Course Search Prototype](./prototypes/mavlink-course-search/index.html)
+- [Group Project: Mavlink Course Search Prototype](./prototypes/mavlink-course-search)
