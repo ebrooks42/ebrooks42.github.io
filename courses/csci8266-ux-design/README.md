@@ -8,4 +8,9 @@
 
 ## Assignments
 
-- [Assignment: Playing with Nordcraft](./playing_with_nordcraft_activity.md)
+- [Assignment: Playing with Nordcraft](./activity_1_playing_with_nordcraft.md)
+- [Assignment: Sense Intent](./activity_2_sense_intent.md)
+
+## Group Projects
+
+- [Group Project: Mavlink Course Search Prototype](./prototypes/mavlink-course-search/index.html)

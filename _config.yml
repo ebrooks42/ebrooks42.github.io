@@ -1,0 +1,2 @@
+exclude:
+  - courses/csci8266-ux-design/prototype-mavlink-course-search/**
