@@ -1,44 +1,11 @@
 import React, { useState } from 'react';
 import { Search, ChevronDown, Check, Clock, User } from 'lucide-react';
+import Results from './components/Results';
+import DegreeRemainingList from './components/DegreeRemainingList';
+import type { DropdownOption } from './lib/filters';
+import { REMAINING_COURSES, filterCourses, getKeywordOptions, SUBJECT_OPTIONS } from './lib/filters';
 
-// --- Types ---
-interface Course {
-  id: string;
-  code: string;
-  name: string;
-  schedule: string;
-  isOpen: boolean;
-}
-
-interface DropdownOption {
-  value: string;
-  label: string;
-}
-
-// --- Mock Data ---
-const REMAINING_COURSES: Course[] = [
-  { id: '1', code: 'CSCI 8266', name: 'UX Design', schedule: 'M/W 12:30 - 1:45', isOpen: true },
-  { id: '2', code: 'CSCI 6000', name: 'Software Engineering', schedule: 'T/H 8:00 - 9:30', isOpen: true },
-  { id: '3', code: 'CSCI 4000', name: 'Senior Capstone', schedule: 'F 10:00 - 1:00', isOpen: false },
-  { id: '4', code: 'MATH 3000', name: 'Linear Algebra', schedule: 'M/W 9:00 - 10:15', isOpen: true },
-  { id: '5', code: 'CSCI 3300', name: 'Database Systems', schedule: 'T/H 2:00 - 3:15', isOpen: true },
-];
-
-const SUBJECT_OPTIONS: DropdownOption[] = [
-  { value: 'bs-cs', label: 'BS Computer Science' },
-  { value: 'ms-cs', label: 'MS Computer Science' },
-  { value: 'bs-se', label: 'BS Software Engineering' },
-  { value: 'minor-cs', label: 'Minor Computer Science' },
-];
-
-const KEYWORD_OPTIONS: DropdownOption[] = [
-  { value: '2010', label: '2010 Datastructures and Algorithms' },
-  { value: '3010', label: '3010 Advanced Algorithms' },
-  { value: '4500', label: '4500 Artificial Intelligence' },
-  { value: '1300', label: '1300 Intro to Programming' },
-];
-
-// --- Components ---
+ // --- Components ---
 
 const FilterSection = ({ title, children, className = "" }: { title: string, children: React.ReactNode, className?: string }) => (
   <div className={`mb-6 ${className}`}>
@@ -167,12 +134,20 @@ export default function App() {
   const [keyword, setKeyword] = useState('');
   const [openOnly, setOpenOnly] = useState(false);
   const [selectedDays, setSelectedDays] = useState<string[]>(['M/W', 'T/TH']); // Pre-selected based on mock
+  const [showResults, setShowResults] = useState(false);
+
+  // Derived options and filtered results using helpers
+  const keywordOptions = getKeywordOptions(filterCourses(REMAINING_COURSES, { subject, selectedDays, openOnly }));
+  const results = filterCourses(REMAINING_COURSES, { subject, selectedDays, openOnly, keyword });
+
+  // Static degree list (first 7 MS Computer Science courses)
+  const MS_REQUIRED_COURSES = REMAINING_COURSES.filter(c => c.subjects.includes('MS Computer Science')).slice(0, 7);
 
   const toggleDay = (day: string) => {
     setSelectedDays(prev => 
       prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
     );
-  };
+  }; 
 
   return (
     <div className="min-h-screen bg-white font-sans text-slate-800">
@@ -181,6 +156,11 @@ export default function App() {
       <div className="h-1 bg-purple-600 w-full mb-8" />
 
       <main className="max-w-7xl mx-auto px-6 pb-20 grid grid-cols-1 lg:grid-cols-12 gap-12">
+        {showResults ? (
+          <div className="lg:col-span-12 xl:col-span-12">
+            <Results results={results} onBack={() => setShowResults(false)} />
+          </div>
+        ) : (<div className="contents">
         
         {/* LEFT COLUMN - SEARCH FILTERS */}
         <div className="lg:col-span-5 xl:col-span-4">
@@ -213,11 +193,13 @@ export default function App() {
             <FilterSection title="Keyword Search">
               <SearchableDropdown 
                 placeholder="Algor" 
-                options={KEYWORD_OPTIONS} 
+                options={keywordOptions} 
                 value={keyword} 
                 onChange={setKeyword} 
               />
             </FilterSection>
+
+            <div className="text-sm text-gray-500 mb-4">Keyword options: {keywordOptions.length} — Results: {results.length}</div>
 
             {/* Open Classes Toggle */}
             <div className="flex items-center gap-3 py-2 cursor-pointer" onClick={() => setOpenOnly(!openOnly)}>
@@ -300,7 +282,7 @@ export default function App() {
                 >
                   Reset
                 </button>
-                <button className="w-full py-3 bg-purple-700 text-white rounded-lg hover:bg-purple-800 font-medium shadow-md hover:shadow-lg transition-all">
+                <button onClick={() => setShowResults(true)} className="w-full py-3 bg-purple-700 text-white rounded-lg hover:bg-purple-800 font-medium shadow-md hover:shadow-lg transition-all">
                   Submit
                 </button>
               </div>
@@ -309,59 +291,11 @@ export default function App() {
           </div>
         </div>
 
-        {/* RIGHT COLUMN - RESULTS & REMAINING COURSES */}
+        {/* RIGHT COLUMN - STATIC REMAINING COURSES (first 7 MS Computer Science) */}
         <div className="lg:col-span-7 xl:col-span-8 pt-4 lg:pt-0">
-          <div className="lg:pl-12">
-            <h2 className="text-2xl text-gray-700 mb-8 font-light">
-              Remaining Required Courses in Your Degree
-            </h2>
-
-            {/* Results Table Container */}
-            <div className="relative bg-white border-t border-b lg:border border-gray-100 lg:rounded-xl lg:shadow-sm overflow-hidden min-h-[500px]">
-              
-              {/* Header */}
-              <div className="grid grid-cols-12 gap-4 px-6 py-4 border-b border-gray-100 bg-gray-50/50 text-sm font-bold text-gray-800">
-                <div className="col-span-1"></div> {/* Checkbox placeholder */}
-                <div className="col-span-3">Course #</div>
-                <div className="col-span-4">Name</div>
-                <div className="col-span-4">Meeting Time</div>
-              </div>
-
-              {/* Scrollable List */}
-              <div className="max-h-[600px] overflow-y-auto custom-scrollbar">
-                {REMAINING_COURSES.map((course) => (
-                  <div 
-                    key={course.id} 
-                    className="grid grid-cols-12 gap-4 px-6 py-5 border-b border-gray-100 items-center hover:bg-gray-50 transition-colors group cursor-pointer"
-                  >
-                    <div className="col-span-1 flex items-center justify-center">
-                       <div className="w-4 h-4 border-2 border-gray-300 rounded group-hover:border-purple-400 bg-white flex items-center justify-center">
-                          {/* Placeholder checkbox */}
-                       </div>
-                    </div>
-                    <div className="col-span-3 font-medium text-gray-800">
-                      {course.code}
-                    </div>
-                    <div className="col-span-4 font-semibold text-gray-700">
-                      {course.name}
-                    </div>
-                    <div className="col-span-4 text-gray-600 font-medium text-sm">
-                      {course.schedule}
-                    </div>
-                  </div>
-                ))}
-
-                {/* Simulated empty space for visual balance if list is short */}
-                <div className="h-40"></div>
-              </div>
-
-              {/* Custom Scrollbar visual track (Decorative to match screenshot) */}
-              <div className="absolute top-14 bottom-4 right-1 w-1.5 bg-gray-100 rounded-full overflow-hidden">
-                <div className="h-1/3 w-full bg-gray-400 rounded-full mt-2"></div>
-              </div>
-            </div>
-          </div>
+          <DegreeRemainingList courses={MS_REQUIRED_COURSES} />
         </div>
+        </div>)}
       </main>
 
       {/* Global CSS for utilities */}
