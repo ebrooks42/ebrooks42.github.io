@@ -103,3 +103,6 @@ In general, I find that a good process map gives enough detail for team members 
     - Adding an offline reading mode would allow users to read the textbook on the go without 
       needing an internet connection.
 
+# Miscellania
+- I find Miro to be really intuitive for this type of rapid sketching of process maps and journey maps.
+  Here's [the live link to the process map I created in this excercise.](https://miro.com/app/board/uXjVGHH5JGo=/?moveToWidget=3458764658869120208&cot=14) 
