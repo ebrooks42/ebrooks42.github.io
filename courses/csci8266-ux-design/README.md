@@ -13,6 +13,7 @@
 
 - [Assignment: Playing with Nordcraft](./activity_1_playing_with_nordcraft.md)
 - [Assignment: Sense Intent](./activity_2_sense_intent.md)
+- [Assignment: Website Mapping and "Works Like" Prototype of Player Space Youth Sports Team Home Page](./prototypes/player-space-home-page)
 
 ## Group Projects
 
