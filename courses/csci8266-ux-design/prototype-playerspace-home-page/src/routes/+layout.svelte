@@ -1,5 +1,6 @@
 <script lang="ts">
 	import './layout.css';
+	import { base } from '$app/paths';
 
 	let { children } = $props();
 	let activePage = $state('home');
@@ -18,7 +19,7 @@
 				<!-- Logo and Team Info -->
 				<div class="flex items-center gap-6">
 					<!-- YMCA Logo -->
-					<img src="/ymca_logo.png" alt="YMCA Logo" class="h-20 w-20 flex-shrink-0 rounded" />
+					<img src="{base}/ymca_logo.png" alt="YMCA Logo" class="h-20 w-20 flex-shrink-0 rounded" />
 
 					<!-- Team Details -->
 					<div>
