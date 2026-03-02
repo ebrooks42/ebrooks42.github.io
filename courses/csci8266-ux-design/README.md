@@ -9,6 +9,7 @@
 - [Outline of Chapter 9 of A Project Guide to UX Design](./outline_chap9.md)
 - [Outline of Chapter 10-11 of A Project Guide to UX Design](./outline_chap10-11.md)
 - [Outline of Chapter 12-13 of A Project Guide to UX Design](./outline_chap12-13.md)
+- [Outline of Chapter 14-15 of A Project Guide to UX Design](./outline_chap14-15.md)
 
 ## Assignments
 
