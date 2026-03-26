@@ -390,6 +390,31 @@ _Clint Byrum, HashiCorp, an IBM Company_
 - And if you don't understand what happened, spend some time writing down at least your questions and hypothesis
 - Your error budget drives what kind of experimentation you can do. If you have a surplus, and have an experiment you think is valuable, don't be afraid to spend the surplus budget.
 
+## Intelligent Load Balancing in Kubernetes
+_Gaurav Nanda and Vincent Cheng, Databricks_
+
+- Migrating from default Kuberenetes load balancer to something custom to our requirements
+- Started with intermittent 5XX errors and high P99 latency, happening across the board for various products at Databricks
+- First instinct is to add more CPU, memory, and pods to affected workloads, but this leads to over-provisioned services
+- Despite overprovisioned workloads, we still had issues
+- We saw that traffic to specific pods was not evenly distributed (in some cases as wrong as 4x more traffic to one pod to another)
+- Kubernetes load balancing happens at the level of _connections_, not _requests_
+    - Result: Depending on the shape, size and workload of a client, the amount of traffic per connection can vary widely. 
+    - This is made worse since only new connections will be balanced to the new pod when scaling occurs.
+- Options to remediate:
+    - Manually reset all connections every X requests or every Y time
+    - Client side load balancing via DNS
+    - Use istio-proxy control plane
+- Built a custom load balancer, started with a naive round-robin approach, but it had issues:
+    - Naive round-robin routing discovered that new pods had a cold start error that was previously hidden by
+      the durable connections. Clients were now discovering pods "too early"
+    - Found some pods had higher error rates or latency than others
+- "Wait, do we want equal distribution? No, we want to get the best _experience_"
+- Tried a few ways to bias:
+    - Bias away from pods with higher CPU usage, CPU was a mismatch from what we _wanted_ to measure
+
+- 
+
 ## Workpad
 
 ### [Throttling testing from 03/20/2026](https://esd41354.apps.dynatrace.com/ui/apps/dynatrace.kubernetes/smartscape/workload/K8S_STATEFULSET?perspective=Utilization&sort=healthIndicators%3Adescending&detailsId=K8S_STATEFULSET-2C823534C4234916&sidebarOpen=false&detailsTab=Utilization&tf=2026-03-20T15%3A00Z%3B2026-03-20T21%3A00Z#filtering=Workload+%3D+bluesky-np-kubernetes-monitoring-activegate+)
@@ -406,15 +431,31 @@ _Clint Byrum, HashiCorp, an IBM Company_
 - Set CPU requests = limits = 600 mcores
     - Predicted outcome: ~1 to 2 cores of CPU throttling, average utilization is LESS than 600m
     - Reasoning: 600m limits is way too little. System will use as much as it can, but get throttled early in each 100 ms period. This reduces the average utilization. 
+    - Outcome: 
+
+<img src="../../assets/images/throttling_investigation_600m_reqs_600m_limits.png" alt="600m/600m Outcome" style="display: block; margin: 0 auto; max-height: 400px; max-width: auto;">
+
 - Set CPU requests = limits = 1500 mcores
     - Predicted outcome: Less than 1.5 cores of CPU throttling, average utilization is greater than prior experiment, but still a bit less than 1500 mcores (though it is closer as a percentage)
     - Reasoning: 1500m is better, but still not enough for the process. System will use as much as it can, but ultimately still get throttled later in the 100 ms period. This reduces the (weighted) average utilization by a bit, but not a huge amount. 
+    - Outcome:
+
+<img src="../../assets/images/throttling_investigation_1500m_reqs_1500m_limits.png" alt="600m/600m Outcome" style="display: block; margin: 0 auto; max-height: 400px; max-width: auto;">
+
+
 - Set CPU requests = 600 mcores, no limits
     - Predicted outcome: No throttling, accurate CPU usage
     - Reasoning: There is no CPU pressure on the node overall, so the "no limits" means that our container will take as much as it needs and EKS will allow that. 
+    - Outcome:
+
+<img src="../../assets/images/throttling_investigation_600m_reqs_NO_limits.png" alt="600m/no limits Outcome" style="display: block; margin: 0 auto; max-height: 400px; max-width: auto;">
+
 - Set CPU requests = 1500 mcores, CPU limits = 125% x requests = 1875 mcores
     - Predicated outcome: Very similar amount of throttling to 1500 mcores scenario, perhaps a bit less
-    - Reasoning: 
+    - Reasoning: 1875 mcores is still not enough for the process, so we will still get throttled, but it should be a bit less than the 1500 mcores scenario.
+    - Outcome:
+
+<img src="../../assets/images/throttling_investigation_1500m_reqs_1875m_limits.png" alt="1500m/1875m Outcome" style="display: block; margin: 0 auto; max-height: 400px; max-width: auto;">
 
 ### To dos after I'm back on work laptop
 - Work on deployment with Viswa at 10 pm central time (8 pm pacific)
