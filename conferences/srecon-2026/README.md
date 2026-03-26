@@ -14,6 +14,33 @@ Contains notes from USENIX SREcon 2026.
 * TOC
 {:toc}
 
+## Overall Takeaways
+- If scaling the cluster should always be an option, we should set up an automation to automatically scale up and
+down the cluster by one node all the time
+- Open a runbook this week and see if it reflects reality. Could someone new on this team open this today and understand it?
+- Implement a SPACE metric in each category, Activity is easiest to get started with
+- Talk to one of your colleagues. Ask them what do you swear at the most. (Schedule 3 listening sessions 
+  [aka coffee with an expert where you ask questions](developerexperiencebook.com], napkin math the cost of one 
+  specific friction point)
+- Talk to someone from finance. Get an estimate of downtime cost per minute/hour/whatever, and, for bonus points, ask 
+  how it is calculated.
+- Your measurement doesn't have to mandate change. It just has to make the status quo uncomfortable. 
+- Look into Kubernetes operators and common use cases for them
+- Limit manual interventions to at most 2 hosts; anything more should be automated. 
+- Ask better questions during incident calls. Instead of `Should we try a rollback?`, try this instead: `John, is there any reason we shouldn't try a rollback? If your're okay or I don't hear from you in 3 minutes, I'm going to try a rollback. Jane, can you get Cloud Ops on the line to prepare for the rollback? `
+- Look into installing and using [SimKube](https://github.com/acrlabs/simkube) to shift left investigation of EKS upgrade impacts.
+
+Fun quotes:
+- Any line of code can be load bearing
+- "Every hour of downtime costs us $12,000. Friction is adding 8 minutes to every incident. Removing that friction will save us $1,600 per incident."
+- Even though we have Terraform modules and it's relatively easy to use them, most developers are not that comfortable with Terraform so we needed something else. - Reddit senior engineer
+
+Book recommendations: 
+- How Complex Systems Fail, by Dr. Richard Cook
+- The Art of Business Value, by Mark Schwartz - ideas of problems to solve outpaces the speed of implementation
+- 
+
+
 ## Notes from Tuesday, March 24th
 
 ### Keynote
@@ -265,33 +292,103 @@ mutually incompatible fields in a protobuf schema, but they are both optional, s
     - Test outcomes should be tracked in your mind and notes, and used to update your hypothesis to create another test.
     - Be proactive: While you are waiting for a test to execute, imagine that your test succeeds, what do you do next? Imagine that the test fails, what do you do next? You can even draft the next coms statement for each of those outcomes while you wait.
 
+- Grab bag of incident communication skills
+    - Throw each action taken into Teams or Zoom chat to specify where we spent our time. 
+    - Make plans with momentum
+    - Ask questions in ways that drive answers, not silence.
+
+**Examples:**
+> Bad example: Should we try a rollback?
+> Improved version: John, is there any reason we shouldn't try a rollback? If your're okay or I don't hear from you in 3 minutes, I'm going to try a rollback. Jane, can you get Cloud Ops on the line to prepare for the rollback? 
 
 
+> Bad: "Are we good to scale up?"
+> Better: "What are the downsides to scale up?"
+> Bad: "Does anyone have any questions?"
+> Better: "What can I clarify for you?"
 
-## Overall Takeaways
-- If scaling the cluster should always be an option, we should set up an automation to automatically scale up and
-down the cluster by one node all the time
-- Open a runbook this week and see if it reflects reality. Could someone new on this team open this today and understand it?
-- Implement a SPACE metric in each category, Activity is easiest to get started with
-- Talk to one of your colleagues. Ask them what do you swear at the most. (Schedule 3 listening sessions 
-  [aka coffee with an expert where you ask questions](developerexperiencebook.com], napkin math the cost of one 
-  specific friction point)
-- Talk to someone from finance. Get an estimate of downtime cost per minute/hour/whatever, and, for bonus points, ask 
-  how it is calculated.
-- Your measurement doesn't have to mandate change. It just has to make the status quo uncomfortable. 
-- Look into Kubernetes operators and common use cases for them
-- Limit manual interventions to at most 2 hosts; anything more should be automated. 
+### Stop Reading Changelogs: Safer Kubernetes Upgrades with [Simulation](https://github.com/acrlabs/simkube)
 
-Fun quotes:
-- Any line of code can be load bearing
-- "Every hour of downtime costs us $12,000. Friction is adding 8 minutes to every incident. Removing that friction will save us $1,600 per incident."
-- Even though we have Terraform modules and it's relatively easy to use them, most developers are not that comfortable with Terraform so we needed something else. - Reddit senior engineer
+- Reddit pi day upgrade (314 minutes long) was the result of a Kubernetes upgrade from 1.23 to 1.24.
+- Talk hosted by drmorr. Grumpy red robot is him, completed PHD in Computer Science in 2014 at UIUC. Worked at Yelp and AirBnb before founding Advanced Computing Research Labs, which does research and development on scaling.
+- Why are Kubernetes upgrades hard?
+    - Release cycle is 14 weeks long (thrice per year, hard to keep up with)
+    - Kubernetes is a series of n independent control loops in a correct-but-unknown order
+    - Lots of discussions about in place upgrades vs lift and shift upgrades
+    - There IS NO ROLLBACK plan. You literally cannot go backwards. You can either restore from a backup in a new cluster or tried to fix forward.
+    - Replicating your production environment is impossible, so test clusters are always going to miss things.
+- What's a typical upgrade process?
+    1. Someone tells you you need to upgrade (probably one of the Cloud Providers, AWS, GCP, etc.)
+    2. Read the changelogs of every component in your cluster
+    3. Play whack a mole with issues in a test cluster
+    4. Upgrade in prod
+    4. Whoops, missed an issue. Hope you got paged before the business unit did.
+- Introducing: [SimKube](https://github.com/acrlabs/simkube), a better way to test Kubernetes upgraes
+    - How it works
+        - Record the YAML files over time, via a tracer
+        - Replay the YAML files over time in a simulation cluster
+        - Use "KWOK" (Kubernetes without Kubelet) to walk nodes, pods, stateful sets, etc. through their lifecycles without needing hardware backing them up
+    - How to use it: SimKube CI Action
+    - Right now, we have a free AMI on the AWS marketplace that comes with the SimKube stuff preinstalled. 
+- How can SimKube help with upgrades?'
+    - Provisioning a simulation environemtn is "free." (no hardware, no cost to run scale tests)
+    - Replicating your production environment is impossible, but simulating can shift your upgrade process left (to your laptop)
+- Some known limitations:
+    - Networking is "right out"
+    - Anything that relies on metrics isn't supported (yet, goal is to have this in next six months) [e.g. HPA, KEDA]
+    - Interactions with cloud providers gets tricky
 
-Book recommendations: 
-- How Complex Systems Fail, by Dr. Richard Cook
-- The Art of Business Value, by Mark Schwartz - ideas of problems to solve outpaces the speed of implementation
-- 
 
+### Precision Over Proliferation: SRE Approach for Leaner, Smarter and Data-Driven Observability
+- Compute dollar per query for monitoring queries
+- Compute cardinality and dollar per query
+- Index metrics to their value to make sure that teams don't ignore old metrics that still cost a lot of money
+
+### Observability for LLMs: Understanding What’s Happening Under the Hood
+_Speaker: Salman Munaf, TikTok_
+
+- The key mental model for LLMs is to observe the entire interaction and not just the REST API endpoint since a 200 response doesn't necessarily mean the LLM is doing what you want it to do or not lying in the response.
+- LLM observability = classical observability + AI observability
+    - Classic signals include latency, errors
+    - AI workflow signals include model calls, tokens, cost, retrieval, tools, grouding, quality, user feedback
+- "just because your LLM endpoint returned 200 OK, it doesn't mean it was a useful response."
+- "Time to first token response" has a higher impact than overall response time since most LLM UIs stream the response as it is generated to the user.
+
+Signals they added:
+- Token usage
+- Time to first token
+- Retrieval behavior, example signals:
+    - retrieval latency
+    - empty retrieval rate
+    - retrieved docs count
+- Tool success, example signals:
+    - tool call count
+    - tool success rate
+    - tool latency
+- Finish reason
+- Quality signals (?)
+
+Things to avoid logging for sensitivy reasons:
+- raw prompts
+- raw completions
+- sensitive user data
+- broad always-on capture
+
+## Notes from Thursday, March 26th
+
+### 5 Wrong Hypotheses about PostgreSQL Multi-Transaction Locks
+_Clint Byrum, HashiCorp, an IBM Company_
+
+- global learning vs local learning
+- While you are doing site reliability engineering, you need to be doing some "site reliability engineering science."
+- PostgreSQL multi transaction locks: make sure that concurrent transactions do not simultaneously edit a single row
+- an index made a query faster, briefly
+    - after index created, query latency improved for about 20 minutes
+    - T+30m: query lantency spikes like crazy, way worse than the original value
+- Expensive experiments when you are already over your error budget are a bad idea
+- Take a picture of the graph and put it somewhere where it _won't die_
+- And if you don't understand what happened, spend some time writing down at least your questions and hypothesis
+- Your error budget drives what kind of experimentation you can do. If you have a surplus, and have an experiment you think is valuable, don't be afraid to spend the surplus budget.
 
 ## Workpad
 
@@ -305,5 +402,20 @@ Book recommendations:
     - result: 1000 to 2000 mcores throttling
 
 ### Follow up scenarios to test on 3/25/2026
-- Set requests = limits, what value should I use? ()
+
+- Set CPU requests = limits = 600 mcores
+    - Predicted outcome: ~1 to 2 cores of CPU throttling, average utilization is LESS than 600m
+    - Reasoning: 600m limits is way too little. System will use as much as it can, but get throttled early in each 100 ms period. This reduces the average utilization. 
+- Set CPU requests = limits = 1500 mcores
+    - Predicted outcome: Less than 1.5 cores of CPU throttling, average utilization is greater than prior experiment, but still a bit less than 1500 mcores (though it is closer as a percentage)
+    - Reasoning: 1500m is better, but still not enough for the process. System will use as much as it can, but ultimately still get throttled later in the 100 ms period. This reduces the (weighted) average utilization by a bit, but not a huge amount. 
+- Set CPU requests = 600 mcores, no limits
+    - Predicted outcome: No throttling, accurate CPU usage
+    - Reasoning: There is no CPU pressure on the node overall, so the "no limits" means that our container will take as much as it needs and EKS will allow that. 
+- Set CPU requests = 1500 mcores, CPU limits = 125% x requests = 1875 mcores
+    - Predicated outcome: Very similar amount of throttling to 1500 mcores scenario, perhaps a bit less
+    - Reasoning: 
+
+### To dos after I'm back on work laptop
+- Work on deployment with Viswa at 10 pm central time (8 pm pacific)
 - 
