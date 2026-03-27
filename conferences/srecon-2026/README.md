@@ -29,16 +29,20 @@ down the cluster by one node all the time
 - Limit manual interventions to at most 2 hosts; anything more should be automated. 
 - Ask better questions during incident calls. Instead of `Should we try a rollback?`, try this instead: `John, is there any reason we shouldn't try a rollback? If your're okay or I don't hear from you in 3 minutes, I'm going to try a rollback. Jane, can you get Cloud Ops on the line to prepare for the rollback? `
 - Look into installing and using [SimKube](https://github.com/acrlabs/simkube) to shift left investigation of EKS upgrade impacts.
+- In the incident write-up, always try to tell a story. 
 
-Fun quotes:
+## Fun quotes:
 - Any line of code can be load bearing
 - "Every hour of downtime costs us $12,000. Friction is adding 8 minutes to every incident. Removing that friction will save us $1,600 per incident."
 - Even though we have Terraform modules and it's relatively easy to use them, most developers are not that comfortable with Terraform so we needed something else. - Reddit senior engineer
+- "Only a fool learns from his own mistakes. The wise man learns from the mistakes of others." -Otto von Bismarck
 
-Book recommendations: 
+## Book recommendations: 
+- When do stories work? by Andrew Gelman and Thomas Basboll
+- Visual Explanations, by Edward Tufte
 - How Complex Systems Fail, by Dr. Richard Cook
 - The Art of Business Value, by Mark Schwartz - ideas of problems to solve outpaces the speed of implementation
-- 
+- From Novice to Expert: Excellence and Power in Clinical Nursing Practice, by Patricia Bennet
 
 
 ## Notes from Tuesday, March 24th
@@ -390,7 +394,7 @@ _Clint Byrum, HashiCorp, an IBM Company_
 - And if you don't understand what happened, spend some time writing down at least your questions and hypothesis
 - Your error budget drives what kind of experimentation you can do. If you have a surplus, and have an experiment you think is valuable, don't be afraid to spend the surplus budget.
 
-## Intelligent Load Balancing in Kubernetes
+### Intelligent Load Balancing in Kubernetes
 _Gaurav Nanda and Vincent Cheng, Databricks_
 
 - Migrating from default Kuberenetes load balancer to something custom to our requirements
@@ -413,7 +417,99 @@ _Gaurav Nanda and Vincent Cheng, Databricks_
 - Tried a few ways to bias:
     - Bias away from pods with higher CPU usage, CPU was a mismatch from what we _wanted_ to measure
 
-- 
+### Reliability Equilibrium: The Hidden Playbook behind SRE Influence
+_Daria Barteneva, Microsoft Azure_
+
+> Your system isn't broken. You're system is doing exactly what it was designed to do. But you can redesign your game.
+
+- Popular discussion group topics: noise reductios, dealng with legacy work, how to get teams to commit to reliability work - same as 8 years ago
+- game theory studies situations where outcome depends on other people's choices
+- A Nash equilibrium is where everyone is doing the best thing for themselves, and no one can improve by changing alone. This means the system is stable, but not necessarily good.
+- SRE's job is to change the game so that the good outcome _becomes the rational one_
+- Game theory primer:
+    - Players: decision makers
+    - Strategies: actions each player can choose
+    - Payoffs: what each player gets from an outcome
+    - Outcome: result of all strategies selected
+- Don't tell people to try harder, change payoffs so that reliability is the rational thing
+    - Make shortcuts stop paying off
+    - Make system state claer so everyone has clear information
+- Freezes become dominant when rollbacks are hard and blame is common. Step to getting a freeze:
+    1. Locally rational behavior to deploy often causes global harms of incidents
+    2. This leads to a freeze being declared globally
+    3. Freezes become synonymous with safety
+- Solutions to solve information asymmetry:
+    - Shared on-call rotations
+    - Blameless post incident reviews
+    - Transparent reliability metrics
+- How can we get out of the "freeze" equilibrium:
+    - Making shipping cheap
+        - Canary + progressive delivery
+        - Fast rollback & reversibility
+        - Early SLIs tied to user experience
+    - Make freezing expensive
+        - Risk accumulates as unreleased fixes
+        - Bigger batch → bigger blast radius later
+- Stag-hare hunt equilibrium describes the risk of making big bets alone. If you make a big bet, but don't have the support of their peers, they get 0 rewards.
+- Free rider problems in SRE: on-call improvements, building docs and runbooks, platform hardening, reducing alert fatigue
+    - In these scenarios, everyone rationally does nothing even though everyone would benefit if someone did something, since there is minimal individual incentive to make a change.
+- Stackelberg Leadership: one player or team commits publicly, others best-respond. Power is not derived from their authority, but their commitment. _First commit, then coordinate._ Ways for SRE to be the first mover:
+    - Create SLOs and error budgets
+    - Improvement deployment processes
+- How to fix incident response:
+    - Reward prevention, not recovery
+    - Fund automation like product work
+    - Rotate and share operational burden
+- What we should measure to make the issue visible:
+    - Time to detect
+    - Time to mitigate
+    - Toil hours per incident
+- How to make retros stick:
+    - Make liearning visible in the system (actions in system)
+    - Track fix completion rate
+    - Measure repeat-incident rate
+    - Measure for improvement, not for punishment
+
+Design:
+1. Make risk legible by modelling the risks of your systems, creating metrics everyone understands
+2. Make decisions collective
+3. SRE makes the first move
+
+Summary: persistent reliability problems are structural, not personal problems.
+
+Summary of four failure modes:
+<img>
+
+- For larger teams with long-lived systems, focs on public goods problems, bayesian game problems, and evolutionary game problems.
+
+### The Power of Stories
+_Lorin Hochstein, Airbnb_
+
+- Why should we care about stories?
+    - Stories _make sense of the senseless events_ that have happened to us
+    - Stories are _memorable_
+
+> The grand challenge of software engineering is how to get the right information into 
+> the heads of the people who need.
+
+> Only a fool learns from his own mistakes. The wise man learns from the mistakes of others
+> _Otto von Bismarck_
+
+Ways to learn:
+- personal experiences
+- witness expertise in action
+- internalize the lived experience of others
+
+Good stories:
+- need to be anomalous from our expectations
+- need to have important details preserved
+
+Different kinds of incident stories you can tell:
+- Horror stories: "And then, after we failed over... the problem followed us into the other region! 😱"
+- Mystery stories: "...But nothing had changed!"
+- Morality tales (Lorin doesn't like these): "And because the failing test was ignored, the bad code made it to production. 😒"
+
+Antidote to morality tales are "second stories," retold when more details have come to light and the pressure has decreased. 
 
 ## Workpad
 
