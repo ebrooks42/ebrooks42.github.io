@@ -1,170 +1,214 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { INSTRUMENTS } from '../data/gameData.js';
-import { formatNumber } from '../data/gameData.js';
 
-// -------------------------------------------------------------------------
-// Floating particle component
-// -------------------------------------------------------------------------
-function Particle({ id, x, y, onDone }) {
-  useEffect(() => {
-    const timer = setTimeout(onDone, 1000);
-    return () => clearTimeout(timer);
-  }, [onDone]);
+// ---------------------------------------------------------------------------
+// Compute beat grid dots from a phrase
+// ---------------------------------------------------------------------------
+function getBeatDots(phrase, numCells = 8) {
+  if (!phrase) return new Array(numCells).fill(false);
+  const totalBeats = phrase.totalBeats || 4;
+  const filled = new Array(numCells).fill(false);
+
+  if (phrase.isDrum) {
+    phrase.hits.forEach(hit => {
+      const idx = Math.min(Math.floor((hit.time / totalBeats) * numCells), numCells - 1);
+      filled[idx] = true;
+    });
+  } else {
+    let beatPos = 0;
+    for (const note of phrase.notes) {
+      if (note.note !== 'REST') {
+        const idx = Math.min(Math.floor((beatPos / totalBeats) * numCells), numCells - 1);
+        filled[idx] = true;
+      }
+      beatPos += note.duration;
+    }
+  }
+
+  return filled;
+}
+
+// ---------------------------------------------------------------------------
+// Single instrument row
+// ---------------------------------------------------------------------------
+function InstrumentRow({ instrument, instState, onToggle, onRowClick }) {
+  const count = instState?.count || 0;
+  const active = instState?.active || false;
+  const phraseIndex = instState?.activePhrase || 0;
+  const phrase = instrument.phrases[phraseIndex];
+
+  const beatDots = useMemo(
+    () => (active ? getBeatDots(phrase) : []),
+    [active, phrase]
+  );
 
   return (
     <div
-      className="pointer-events-none absolute select-none font-bold text-yellow-300 text-lg animate-float-up z-50"
-      style={{ left: x, top: y, transform: 'translate(-50%, -50%)' }}
+      className="flex items-stretch border-b border-black/25 cursor-pointer select-none"
+      data-instrument-row={instrument.id}
+      style={{ minHeight: 52 }}
+      onClick={() => active && onRowClick(instrument.id)}
     >
-      ♪+1
+      {/* Instrument control column */}
+      <div
+        className="flex items-center gap-2 px-3 flex-shrink-0"
+        style={{ width: 185, background: count > 0 ? '#222222' : '#1c1c1c' }}
+      >
+        {/* Colored icon box */}
+        <div
+          className="w-9 h-9 rounded flex items-center justify-center text-base flex-shrink-0 font-bold"
+          style={{
+            background: count > 0 ? instrument.color : '#3a3a3a',
+            color: count > 0 ? '#fff' : '#555',
+            fontSize: instrument.emoji.length > 1 ? 18 : 20,
+          }}
+        >
+          {instrument.emoji}
+        </div>
+
+        {/* Toggle pill */}
+        {count > 0 ? (
+          <button
+            data-tutorial-toggle={instrument.id}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold text-white flex-shrink-0"
+            style={{
+              background: active ? '#22C55E' : '#EF4444',
+              minWidth: 68,
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggle(instrument.id);
+            }}
+          >
+            <div
+              className="w-3 h-3 rounded-full bg-white/90 flex-shrink-0"
+              style={{ transform: active ? 'none' : 'none' }}
+            />
+            <span>{active ? 'ON' : 'OFF'}</span>
+          </button>
+        ) : (
+          <div
+            className="rounded-full flex-shrink-0"
+            style={{ width: 68, height: 26, background: '#333', opacity: 0.5 }}
+          />
+        )}
+      </div>
+
+      {/* Beat grid */}
+      {active ? (
+        <div
+          data-tutorial-beatgrid={instrument.id}
+          className="flex-1 flex items-center px-1 py-1.5 gap-0.5"
+          style={{ background: '#c0c0c0' }}
+        >
+          {beatDots.map((filled, i) => (
+            <div
+              key={i}
+              className="flex-1 h-full flex items-center justify-center rounded-sm"
+              style={{
+                background: i % 2 === 0 ? '#a8a8a8' : '#b8b8b8',
+                minWidth: 0,
+              }}
+            >
+              {filled && (
+                <div
+                  className="rounded-full"
+                  style={{
+                    width: '60%',
+                    paddingTop: '60%',
+                    background: '#FBBF24',
+                    boxShadow: '0 1px 4px rgba(0,0,0,0.25)',
+                  }}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div
+          className="flex-1"
+          style={{ background: count > 0 ? '#2a2a2a' : '#1e1e1e' }}
+        />
+      )}
     </div>
   );
 }
 
-// -------------------------------------------------------------------------
-// LeftPane
-// -------------------------------------------------------------------------
-export default function LeftPane({ state, stats, onCompose, audioInitialized }) {
-  const [particles, setParticles] = useState([]);
-  const [isPulsing, setIsPulsing] = useState(false);
-  const [clickCount, setClickCount] = useState(0);
-  const containerRef = useRef(null);
-  const particleIdRef = useRef(0);
-
-  // Determine the "primary" instrument (last purchased or highest count)
-  const primaryInstrument = React.useMemo(() => {
-    let best = INSTRUMENTS[0];
-    for (const inst of [...INSTRUMENTS].reverse()) {
-      if (state.instruments[inst.id]?.count > 0) {
-        best = inst;
-        break;
-      }
-    }
-    return best;
-  }, [state.instruments]);
-
-  const removeParticle = useCallback((id) => {
-    setParticles(prev => prev.filter(p => p.id !== id));
-  }, []);
-
-  const handleClick = useCallback((e) => {
-    onCompose();
-    setIsPulsing(true);
-    setClickCount(c => c + 1);
-    setTimeout(() => setIsPulsing(false), 300);
-
-    // Spawn particle at click position
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (rect) {
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      const id = particleIdRef.current++;
-      setParticles(prev => [...prev.slice(-12), { id, x, y }]);
-    }
-  }, [onCompose]);
-
-  // Passive NPS display — updates each render
-  const { totalNPC, totalNPS } = stats;
-
+// ---------------------------------------------------------------------------
+// TimelinePane
+// ---------------------------------------------------------------------------
+export default function TimelinePane({ state, stats, onToggle, onRowClick, onTempoChange, onVolumeChange }) {
   return (
-    <div
-      className="flex flex-col h-full"
-      style={{ background: '#1a1a2e' }}
-    >
-      {/* Header strip */}
-      <div className="px-4 py-3 border-b border-purple-900/40">
-        <h2 className="text-purple-300 font-bold text-sm uppercase tracking-widest">Studio</h2>
+    <div className="flex flex-col h-full" style={{ background: '#2a2a2a' }}>
+
+      {/* Header */}
+      <div
+        className="flex-shrink-0 flex items-center justify-center"
+        style={{ height: 72, borderBottom: '2px solid #1a1a1a' }}
+      >
+        <h1
+          className="font-light tracking-wide"
+          style={{ fontSize: 36, color: '#9ca3af', letterSpacing: '0.05em' }}
+        >
+          Timeline
+        </h1>
       </div>
 
-      {/* Main click area */}
-      <div
-        ref={containerRef}
-        className="flex-1 relative flex flex-col items-center justify-center gap-6 px-4 overflow-hidden"
-      >
-        {/* Particles */}
-        {particles.map(p => (
-          <Particle
-            key={p.id}
-            id={p.id}
-            x={p.x}
-            y={p.y}
-            onDone={() => removeParticle(p.id)}
+      {/* Empty composition space */}
+      <div className="flex-1 min-h-0" style={{ background: '#1e1e1e' }}>
+        {/* Tempo / volume controls in top area */}
+        <div className="px-6 pt-4 pb-2 space-y-2 opacity-60">
+          <div className="flex items-center gap-3">
+            <span className="text-gray-400 text-xs w-10">BPM</span>
+            <input
+              type="range"
+              min={60}
+              max={200}
+              value={state.tempo}
+              onChange={e => onTempoChange(Number(e.target.value))}
+              className="flex-1 h-1.5 rounded-full cursor-pointer"
+            />
+            <span className="text-gray-400 text-xs w-8 text-right font-mono">{state.tempo}</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-gray-400 text-xs w-10">Vol</span>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={state.volume}
+              onChange={e => onVolumeChange(Number(e.target.value))}
+              className="flex-1 h-1.5 rounded-full cursor-pointer"
+            />
+            <span className="text-gray-400 text-xs w-8 text-right font-mono">{state.volume}%</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Instrument rows panel */}
+      <div className="flex-shrink-0" style={{ background: '#1a1a1a' }}>
+        {INSTRUMENTS.map(inst => (
+          <InstrumentRow
+            key={inst.id}
+            instrument={inst}
+            instState={state.instruments[inst.id]}
+            onToggle={onToggle}
+            onRowClick={onRowClick}
           />
         ))}
+      </div>
 
-        {/* Ambient glow behind the icon */}
-        <div
-          className="absolute rounded-full pointer-events-none opacity-20 blur-3xl"
-          style={{
-            width: 220,
-            height: 220,
-            background: primaryInstrument.color,
-          }}
-        />
-
-        {/* Instrument icon button */}
+      {/* Export button */}
+      <div
+        className="flex-shrink-0 flex items-center justify-end px-4 py-2 border-t border-black/40"
+        style={{ background: '#2a2a2a' }}
+      >
         <button
-          onClick={handleClick}
-          className="relative flex items-center justify-center rounded-full cursor-pointer select-none
-                     transition-transform duration-150 active:scale-95 focus:outline-none"
-          style={{
-            width: 180,
-            height: 180,
-            background: `radial-gradient(circle at 40% 35%, ${primaryInstrument.color}33, ${primaryInstrument.color}11)`,
-            border: `3px solid ${primaryInstrument.color}66`,
-            boxShadow: isPulsing
-              ? `0 0 48px ${primaryInstrument.color}99, 0 0 90px ${primaryInstrument.color}44`
-              : `0 0 24px ${primaryInstrument.color}44`,
-            transform: isPulsing ? 'scale(1.1)' : 'scale(1)',
-            transition: 'transform 0.15s ease-out, box-shadow 0.15s ease-out',
-          }}
-          title="Compose!"
-          aria-label="Compose notes"
+          className="text-gray-400 text-sm font-medium tracking-wide hover:text-gray-200 transition-colors"
+          onClick={() => {}}
         >
-          <span style={{ fontSize: 80, lineHeight: 1 }} role="img" aria-label={primaryInstrument.name}>
-            {primaryInstrument.emoji}
-          </span>
+          Export ↓
         </button>
-
-        {/* Compose label */}
-        <div className="text-center">
-          <div
-            className="font-black text-xl tracking-wide uppercase"
-            style={{ color: primaryInstrument.color }}
-          >
-            Compose!
-          </div>
-          <div className="text-xs text-purple-400/60 mt-0.5">{primaryInstrument.name}</div>
-        </div>
-
-        {/* Stats */}
-        <div className="w-full max-w-xs space-y-2">
-          <div className="flex items-center justify-between bg-black/30 rounded-lg px-4 py-2.5">
-            <span className="text-purple-300/70 text-sm">Per Click</span>
-            <span className="text-yellow-300 font-bold text-lg">
-              ♪ {formatNumber(totalNPC)}
-            </span>
-          </div>
-          <div className="flex items-center justify-between bg-black/30 rounded-lg px-4 py-2.5">
-            <span className="text-purple-300/70 text-sm">Per Second</span>
-            <span className="font-bold text-lg" style={{ color: '#a78bfa' }}>
-              ⚡ {formatNumber(totalNPS)}
-            </span>
-          </div>
-          <div className="flex items-center justify-between bg-black/30 rounded-lg px-4 py-2.5">
-            <span className="text-purple-300/70 text-sm">Clicks</span>
-            <span className="text-purple-400 font-bold text-lg">
-              {formatNumber(clickCount)}
-            </span>
-          </div>
-        </div>
-
-        {/* Audio hint */}
-        {!audioInitialized && (
-          <div className="text-purple-400/50 text-xs text-center animate-pulse">
-            Click to start the music!
-          </div>
-        )}
       </div>
     </div>
   );
