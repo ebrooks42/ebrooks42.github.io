@@ -1,9 +1,9 @@
 import { useReducer, useEffect, useRef, useCallback } from 'react';
 import { INSTRUMENTS, UPGRADES, getInstrumentCost } from '../data/gameData.js';
 
-const SAVE_KEY = 'music_clicker_save_v1';
-const TICK_INTERVAL = 100;   // ms
-const SAVE_INTERVAL = 10000; // ms
+const SAVE_KEY = 'music_clicker_save_v2';
+const TICK_INTERVAL = 100;
+const SAVE_INTERVAL = 10000;
 
 // ---------------------------------------------------------------------------
 // Initial state
@@ -12,20 +12,21 @@ function buildInitialState() {
   const instruments = {};
   INSTRUMENTS.forEach(inst => {
     instruments[inst.id] = {
-      count: inst.id === 'piano' ? 1 : 0,
-      activePhrase: 0,   // index into inst.phrases (0-based)
-      unlockedPhrases: inst.id === 'piano' ? [true, false, false] : [false, false, false],
+      count: 0,
+      activePhrase: 0,
+      active: false,
+      unlockedPhrases: [false, false, false],
     };
   });
 
   return {
-    notes: 0,
+    notes: 30,          // starting balance to purchase first instrument
     totalNotesEarned: 0,
     instruments,
     purchasedUpgrades: [],
     tempo: 120,
-    volume: 70,  // 0-100
-    npc: 1,      // notes per click base
+    volume: 70,
+    npc: 1,
   };
 }
 
@@ -35,7 +36,6 @@ function buildInitialState() {
 export function computeStats(state) {
   const { instruments, purchasedUpgrades } = state;
 
-  // NPC
   let npcMultiplier = 1;
   let npsMultiplier = 1;
   let npsPerInstrumentBonus = 0;
@@ -50,7 +50,6 @@ export function computeStats(state) {
 
   const totalNPC = state.npc * npcMultiplier;
 
-  // Total instruments owned (all types, all counts)
   let totalInstrumentCount = 0;
   INSTRUMENTS.forEach(inst => {
     totalInstrumentCount += instruments[inst.id]?.count || 0;
@@ -58,15 +57,15 @@ export function computeStats(state) {
 
   let totalNPS = 0;
   INSTRUMENTS.forEach(inst => {
-    const count = instruments[inst.id]?.count || 0;
-    if (count > 0) {
+    const instState = instruments[inst.id];
+    const count = instState?.count || 0;
+    const active = instState?.active || false;
+    if (count > 0 && active) {
       totalNPS += inst.baseNPS * count;
     }
   });
 
-  // Add per-instrument bonus
   totalNPS += npsPerInstrumentBonus * totalInstrumentCount;
-
   totalNPS *= npsMultiplier;
 
   return { totalNPC, totalNPS, totalInstrumentCount };
@@ -90,6 +89,7 @@ function gameReducer(state, action) {
     case 'TICK': {
       const { totalNPS } = computeStats(state);
       const gain = totalNPS * (TICK_INTERVAL / 1000);
+      if (gain === 0) return state;
       return {
         ...state,
         notes: state.notes + gain,
@@ -108,7 +108,6 @@ function gameReducer(state, action) {
 
       const newCount = current.count + 1;
       const newUnlocked = [...current.unlockedPhrases];
-      // First purchase unlocks phrase 1
       if (newCount === 1) {
         newUnlocked[0] = true;
       }
@@ -127,16 +126,32 @@ function gameReducer(state, action) {
       };
     }
 
+    case 'TOGGLE_INSTRUMENT': {
+      const { instrumentId } = action;
+      const current = state.instruments[instrumentId];
+      if (!current || current.count === 0) return state;
+      return {
+        ...state,
+        instruments: {
+          ...state.instruments,
+          [instrumentId]: {
+            ...current,
+            active: !current.active,
+          },
+        },
+      };
+    }
+
     case 'BUY_PHRASE': {
       const { instrumentId, phraseIndex } = action;
       const inst = INSTRUMENTS.find(i => i.id === instrumentId);
       if (!inst) return state;
 
       const current = state.instruments[instrumentId];
-      if (current.count === 0) return state; // must own instrument first
-      if (current.unlockedPhrases[phraseIndex]) return state; // already unlocked
+      if (current.count === 0) return state;
+      if (current.unlockedPhrases[phraseIndex]) return state;
 
-      const cost = inst.phraseCosts[phraseIndex + 1]; // +1 because phraseCosts[0] is unused
+      const cost = inst.phraseCosts[phraseIndex + 1];
       if (state.notes < cost) return state;
 
       const newUnlocked = [...current.unlockedPhrases];
@@ -211,13 +226,11 @@ function gameReducer(state, action) {
 // ---------------------------------------------------------------------------
 export function useGameState() {
   const [state, dispatch] = useReducer(gameReducer, null, () => {
-    // Try to load from localStorage on init
     try {
       const raw = localStorage.getItem(SAVE_KEY);
       if (raw) {
         const saved = JSON.parse(raw);
         const initial = buildInitialState();
-        // Deep-merge: start from initial, overlay saved values
         const merged = {
           ...initial,
           ...saved,
@@ -237,7 +250,6 @@ export function useGameState() {
     return buildInitialState();
   });
 
-  // Tick
   useEffect(() => {
     const timer = setInterval(() => {
       dispatch({ type: 'TICK' });
@@ -245,7 +257,6 @@ export function useGameState() {
     return () => clearInterval(timer);
   }, []);
 
-  // Auto-save
   const stateRef = useRef(state);
   stateRef.current = state;
   useEffect(() => {
@@ -261,6 +272,7 @@ export function useGameState() {
 
   const click = useCallback(() => dispatch({ type: 'CLICK' }), []);
   const buyInstrument = useCallback((id) => dispatch({ type: 'BUY_INSTRUMENT', instrumentId: id }), []);
+  const toggleInstrument = useCallback((id) => dispatch({ type: 'TOGGLE_INSTRUMENT', instrumentId: id }), []);
   const buyPhrase = useCallback((instrumentId, phraseIndex) => dispatch({ type: 'BUY_PHRASE', instrumentId, phraseIndex }), []);
   const setActivePhrase = useCallback((instrumentId, phraseIndex) => dispatch({ type: 'SET_ACTIVE_PHRASE', instrumentId, phraseIndex }), []);
   const buyUpgrade = useCallback((id) => dispatch({ type: 'BUY_UPGRADE', upgradeId: id }), []);
@@ -279,6 +291,7 @@ export function useGameState() {
     dispatch,
     click,
     buyInstrument,
+    toggleInstrument,
     buyPhrase,
     setActivePhrase,
     buyUpgrade,
