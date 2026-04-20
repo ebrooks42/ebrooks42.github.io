@@ -3,7 +3,7 @@ import { INSTRUMENTS, UPGRADES, getInstrumentCost } from '../data/gameData.js';
 
 const SAVE_KEY = 'music_clicker_save_v2';
 const TICK_INTERVAL = 100;
-const SAVE_INTERVAL = 10000;
+const NOTES_SAVE_INTERVAL = 3000; // save note balance every 3s
 
 // ---------------------------------------------------------------------------
 // Initial state
@@ -259,6 +259,18 @@ export function useGameState() {
 
   const stateRef = useRef(state);
   stateRef.current = state;
+
+  // Save immediately whenever meaningful state changes (instruments, upgrades, settings)
+  useEffect(() => {
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify(stateRef.current));
+    } catch (e) {
+      console.warn('Failed to save:', e);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.instruments, state.purchasedUpgrades, state.tempo, state.volume]);
+
+  // Also periodically save note balance (changes every tick, so we throttle it)
   useEffect(() => {
     const timer = setInterval(() => {
       try {
@@ -266,7 +278,7 @@ export function useGameState() {
       } catch (e) {
         console.warn('Failed to save:', e);
       }
-    }, SAVE_INTERVAL);
+    }, NOTES_SAVE_INTERVAL);
     return () => clearInterval(timer);
   }, []);
 
