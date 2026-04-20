@@ -108,10 +108,10 @@ function gameReducer(state, action) {
       if (state.notes < cost) return state;
 
       const newCount = current.count + 1;
-      const newUnlocked = [...current.unlockedPhrases];
-      if (newCount === 1) {
-        newUnlocked[0] = true;
-      }
+      // Unlock all phrases for free when the instrument is first purchased
+      const newUnlocked = newCount === 1
+        ? current.unlockedPhrases.map(() => true)
+        : current.unlockedPhrases;
 
       return {
         ...state,
@@ -215,16 +215,17 @@ function gameReducer(state, action) {
       const newPattern = [...base];
       newPattern[cellIndex] = !newPattern[cellIndex];
 
-      // Award notes for composing: 4 at baseline, scaled by npc_multiplier upgrades
-      // (same multiplier that applies to regular clicks via Better Technique, etc.)
-      const { totalNPC } = computeStats(state);
-      const npcMultiplier = totalNPC / Math.max(state.npc, 1);
-      const editGain = 4 * npcMultiplier;
+      // Award notes only if caller signals it's time (debounced externally)
+      const noteUpdate = action.earnNotes ? (() => {
+        const { totalNPC } = computeStats(state);
+        const npcMultiplier = totalNPC / Math.max(state.npc, 1);
+        const editGain = 4 * npcMultiplier;
+        return { notes: state.notes + editGain, totalNotesEarned: state.totalNotesEarned + editGain };
+      })() : { notes: state.notes, totalNotesEarned: state.totalNotesEarned };
 
       return {
         ...state,
-        notes: state.notes + editGain,
-        totalNotesEarned: state.totalNotesEarned + editGain,
+        ...noteUpdate,
         instruments: {
           ...state.instruments,
           [instrumentId]: {
@@ -272,10 +273,15 @@ export function useGameState() {
           instruments: {},
         };
         INSTRUMENTS.forEach(inst => {
-          merged.instruments[inst.id] = {
+          const instData = {
             ...(initial.instruments[inst.id]),
             ...(saved.instruments?.[inst.id] || {}),
           };
+          // Migration: unlock all phrases for already-owned instruments
+          if (instData.count > 0) {
+            instData.unlockedPhrases = instData.unlockedPhrases.map(() => true);
+          }
+          merged.instruments[inst.id] = instData;
         });
         return merged;
       }
@@ -325,8 +331,8 @@ export function useGameState() {
   const buyUpgrade = useCallback((id) => dispatch({ type: 'BUY_UPGRADE', upgradeId: id }), []);
   const setTempo = useCallback((t) => dispatch({ type: 'SET_TEMPO', tempo: t }), []);
   const setVolume = useCallback((v) => dispatch({ type: 'SET_VOLUME', volume: v }), []);
-  const toggleBeat = useCallback((instrumentId, cellIndex) =>
-    dispatch({ type: 'TOGGLE_BEAT', instrumentId, cellIndex }), []);
+  const toggleBeat = useCallback((instrumentId, cellIndex, earnNotes = false) =>
+    dispatch({ type: 'TOGGLE_BEAT', instrumentId, cellIndex, earnNotes }), []);
   const reset = useCallback(() => {
     localStorage.removeItem(SAVE_KEY);
     dispatch({ type: 'RESET' });

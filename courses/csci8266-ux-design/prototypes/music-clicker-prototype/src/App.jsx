@@ -118,6 +118,7 @@ export default function App() {
     localStorage.getItem('music_clicker_tutorial_done') ? -1 : 0
   );
   const driverRef = useRef(null);
+  const lastBeatRewardRef = useRef(0); // timestamp of last beat-edit note reward
 
   // Initialize driver.js tutorial on mount
   useEffect(() => {
@@ -265,7 +266,11 @@ export default function App() {
 
   const handleBeatToggle = useCallback((instrumentId, cellIndex) => {
     initAudio();
-    toggleBeat(instrumentId, cellIndex);
+    // Reward notes at most once per 3 seconds to prevent spam farming
+    const now = Date.now();
+    const earnNotes = now - lastBeatRewardRef.current >= 3000;
+    if (earnNotes) lastBeatRewardRef.current = now;
+    toggleBeat(instrumentId, cellIndex, earnNotes);
     // Advance tutorial from step 3 on first beat edit
     if (tutorialStepRef.current === 2) {
       tutorialStepRef.current = 3;
