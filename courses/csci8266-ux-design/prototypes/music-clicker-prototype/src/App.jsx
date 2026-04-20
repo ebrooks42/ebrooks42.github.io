@@ -170,12 +170,9 @@ export default function App() {
       stageRadius: 8,
       steps: TUTORIAL_STEP_CONFIGS,
       onNextClick: () => {
-        // Only allow manual advance on the last step (Done button)
-        if (tutorialStepRef.current === 3) {
-          d.destroy();
-          tutorialStepRef.current = -1;
-        }
-        // Other steps auto-advance via state changes, don't allow manual next
+        // Button is always Skip (early steps) or Done (last step) — always dismiss
+        d.destroy();
+        tutorialStepRef.current = -1;
       },
       onDestroyStarted: () => {
         d.destroy();
