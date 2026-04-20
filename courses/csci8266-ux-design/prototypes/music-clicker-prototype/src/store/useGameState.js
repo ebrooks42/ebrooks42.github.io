@@ -1,5 +1,5 @@
 import { useReducer, useEffect, useRef, useCallback } from 'react';
-import { INSTRUMENTS, UPGRADES, getInstrumentCost } from '../data/gameData.js';
+import { INSTRUMENTS, UPGRADES, getInstrumentCost, getDefaultPattern } from '../data/gameData.js';
 
 const SAVE_KEY = 'music_clicker_save_v2';
 const TICK_INTERVAL = 100;
@@ -16,6 +16,7 @@ function buildInitialState() {
       activePhrase: 0,
       active: false,
       unlockedPhrases: [false, false, false],
+      customPattern: null, // null = use default phrase; array of 8 booleans = step sequencer
     };
   });
 
@@ -182,6 +183,7 @@ function gameReducer(state, action) {
           [instrumentId]: {
             ...current,
             activePhrase: phraseIndex,
+            customPattern: null, // reset step sequencer when switching phrases
           },
         },
       };
@@ -197,6 +199,31 @@ function gameReducer(state, action) {
         ...state,
         notes: state.notes - upg.cost,
         purchasedUpgrades: [...state.purchasedUpgrades, upgradeId],
+      };
+    }
+
+    case 'TOGGLE_BEAT': {
+      const { instrumentId, cellIndex } = action;
+      const inst = INSTRUMENTS.find(i => i.id === instrumentId);
+      if (!inst) return state;
+
+      const current = state.instruments[instrumentId];
+      const phrase = inst.phrases[current.activePhrase || 0];
+
+      // Seed from default pattern on first edit
+      const base = current.customPattern || getDefaultPattern(phrase);
+      const newPattern = [...base];
+      newPattern[cellIndex] = !newPattern[cellIndex];
+
+      return {
+        ...state,
+        instruments: {
+          ...state.instruments,
+          [instrumentId]: {
+            ...current,
+            customPattern: newPattern,
+          },
+        },
       };
     }
 
@@ -290,6 +317,8 @@ export function useGameState() {
   const buyUpgrade = useCallback((id) => dispatch({ type: 'BUY_UPGRADE', upgradeId: id }), []);
   const setTempo = useCallback((t) => dispatch({ type: 'SET_TEMPO', tempo: t }), []);
   const setVolume = useCallback((v) => dispatch({ type: 'SET_VOLUME', volume: v }), []);
+  const toggleBeat = useCallback((instrumentId, cellIndex) =>
+    dispatch({ type: 'TOGGLE_BEAT', instrumentId, cellIndex }), []);
   const reset = useCallback(() => {
     localStorage.removeItem(SAVE_KEY);
     dispatch({ type: 'RESET' });
@@ -309,6 +338,7 @@ export function useGameState() {
     buyUpgrade,
     setTempo,
     setVolume,
+    toggleBeat,
     reset,
   };
 }

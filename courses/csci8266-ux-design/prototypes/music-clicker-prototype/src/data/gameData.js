@@ -439,6 +439,67 @@ export const UPGRADES = [
   },
 ];
 
+// ---------------------------------------------------------------------------
+// Step sequencer helpers
+// ---------------------------------------------------------------------------
+
+// One note per cell (8 cells) for each melodic instrument
+const STEP_NOTES = {
+  piano:    ['C4','E4','G4','A4','C5','A4','G4','E4'],
+  guitar:   ['G3','A3','C4','D4','E4','D4','C4','A3'],
+  triangle: ['C5','E5','G5','C5','G5','E5','C5','G5'],
+  kazoo:    ['C4','D4','E4','G4','A4','G4','E4','D4'],
+  bass:     ['C2','G2','A2','G2','C2','G2','A2','G2'],
+};
+
+// Drum type per step cell
+const STEP_DRUMS = ['kick','hihat','snare','hihat','kick','hihat','snare','hihat'];
+
+// Derive an 8-cell boolean pattern from a phrase (used to seed customPattern)
+export function getDefaultPattern(phrase, numCells = 8) {
+  if (!phrase) return new Array(numCells).fill(false);
+  const totalBeats = phrase.totalBeats || 4;
+  const filled = new Array(numCells).fill(false);
+
+  if (phrase.isDrum) {
+    phrase.hits.forEach(hit => {
+      const idx = Math.min(Math.floor((hit.time / totalBeats) * numCells), numCells - 1);
+      filled[idx] = true;
+    });
+  } else {
+    let beatPos = 0;
+    for (const note of phrase.notes) {
+      if (note.note !== 'REST') {
+        const idx = Math.min(Math.floor((beatPos / totalBeats) * numCells), numCells - 1);
+        filled[idx] = true;
+      }
+      beatPos += note.duration;
+    }
+  }
+  return filled;
+}
+
+// Build an audio-engine-compatible phraseData from an 8-cell boolean pattern
+export function buildPhraseFromPattern(instrumentId, pattern) {
+  const CELL_BEATS = 0.5;
+  const totalBeats = pattern.length * CELL_BEATS;
+
+  if (instrumentId === 'drums') {
+    const hits = [];
+    pattern.forEach((active, i) => {
+      if (active) hits.push({ drum: STEP_DRUMS[i], time: i * CELL_BEATS });
+    });
+    return { isDrum: true, hits, totalBeats };
+  }
+
+  const scaleNotes = STEP_NOTES[instrumentId] || new Array(pattern.length).fill('C4');
+  const notes = pattern.map((active, i) => ({
+    note: active ? scaleNotes[i] : 'REST',
+    duration: CELL_BEATS,
+  }));
+  return { notes, totalBeats };
+}
+
 export function getInstrumentCost(instrument, countOwned) {
   if (instrument.baseCost === 0 && countOwned === 0) return 0;
   return Math.ceil(instrument.baseCost * Math.pow(1.15, countOwned));

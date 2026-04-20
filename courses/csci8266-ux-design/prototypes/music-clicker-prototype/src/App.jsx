@@ -3,7 +3,7 @@ import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
 import { useGameState } from './store/useGameState.js';
 import { audioEngine } from './audio/audioEngine.js';
-import { INSTRUMENTS } from './data/gameData.js';
+import { INSTRUMENTS, buildPhraseFromPattern } from './data/gameData.js';
 import TimelinePane from './components/LeftPane.jsx';
 import ShopPane from './components/RightPane.jsx';
 
@@ -27,17 +27,24 @@ function useAudioSync(state, audioInitialized) {
       const count = instState?.count || 0;
       const active = instState?.active || false;
       const phraseIndex = instState?.activePhrase || 0;
-      const phraseData = inst.phrases[phraseIndex];
+      const customPattern = instState?.customPattern || null;
 
       const prevInstState = prev?.instruments?.[inst.id];
       const prevCount = prevInstState?.count || 0;
       const prevActive = prevInstState?.active || false;
       const prevPhrase = prevInstState?.activePhrase || 0;
+      const prevCustomPattern = prevInstState?.customPattern || null;
+
+      // Use custom step-sequencer pattern if set, otherwise use the phrase
+      const phraseData = customPattern
+        ? buildPhraseFromPattern(inst.id, customPattern)
+        : inst.phrases[phraseIndex];
 
       const shouldPlay = count > 0 && active;
       const wasShouldPlay = prevCount > 0 && prevActive;
+      const patternChanged = customPattern !== prevCustomPattern;
 
-      if (shouldPlay && (!wasShouldPlay || phraseIndex !== prevPhrase)) {
+      if (shouldPlay && (!wasShouldPlay || phraseIndex !== prevPhrase || patternChanged)) {
         audioEngine.startInstrument(inst.id, phraseData, inst.audioType || inst.id);
       } else if (!shouldPlay && wasShouldPlay) {
         audioEngine.stopInstrument(inst.id);
@@ -102,6 +109,7 @@ export default function App() {
     buyUpgrade,
     setTempo,
     setVolume,
+    toggleBeat,
     reset,
   } = useGameState();
 
@@ -244,7 +252,10 @@ export default function App() {
         const active = instState?.active || false;
         if (count > 0 && active) {
           const phraseIndex = instState?.activePhrase || 0;
-          const phraseData = inst.phrases[phraseIndex];
+          const customPattern = instState?.customPattern || null;
+          const phraseData = customPattern
+            ? buildPhraseFromPattern(inst.id, customPattern)
+            : inst.phrases[phraseIndex];
           audioEngine.startInstrument(inst.id, phraseData, inst.audioType || inst.id);
         }
       });
@@ -260,6 +271,22 @@ export default function App() {
     initAudio();
     toggleInstrument(id);
   }, [initAudio, toggleInstrument]);
+
+  const handleBeatToggle = useCallback((instrumentId, cellIndex) => {
+    initAudio();
+    toggleBeat(instrumentId, cellIndex);
+    // Advance tutorial from step 3 on first beat edit
+    if (tutorialStepRef.current === 2) {
+      tutorialStepRef.current = 3;
+      setTimeout(() => {
+        if (driverRef.current && tutorialStepRef.current === 3) {
+          driverRef.current.moveTo(3);
+          const btn = document.querySelector('.driver-popover-next-btn');
+          if (btn) btn.textContent = 'DONE';
+        }
+      }, 100);
+    }
+  }, [initAudio, toggleBeat]);
 
   const handleRowClick = useCallback((id) => {
     if (tutorialStepRef.current === 2) {
@@ -299,7 +326,7 @@ export default function App() {
           state={state}
           stats={stats}
           onToggle={handleToggle}
-          onRowClick={handleRowClick}
+          onBeatToggle={handleBeatToggle}
           onTempoChange={handleTempoChange}
           onVolumeChange={handleVolumeChange}
           onReset={() => {
