@@ -4,7 +4,7 @@ import 'driver.js/dist/driver.css';
 import { useGameState } from './store/useGameState.js';
 import { audioEngine } from './audio/audioEngine.js';
 import { exportAudio } from './audio/exportAudio.js';
-import { INSTRUMENTS, buildPhraseFromPattern } from './data/gameData.js';
+import { INSTRUMENTS, UPGRADES, buildPhraseFromPattern } from './data/gameData.js';
 import TimelinePane from './components/LeftPane.jsx';
 import ShopPane from './components/RightPane.jsx';
 
@@ -116,6 +116,7 @@ export default function App() {
 
   const [audioInitialized, setAudioInitialized] = useState(false);
   const [exportState, setExportState] = useState(null); // null | { progress: 0–1 }
+  const [showCongrats, setShowCongrats] = useState(false);
   const tutorialStepRef = useRef(
     localStorage.getItem('music_clicker_tutorial_done') ? -1 : 0
   );
@@ -333,6 +334,17 @@ export default function App() {
     }
   }, [exportState, audioInitialized, state.instruments, state.tempo]);
 
+  // Win condition: all instruments purchased + all upgrades bought
+  useEffect(() => {
+    if (localStorage.getItem('music_clicker_congrats_shown')) return;
+    const allInstruments = INSTRUMENTS.every(inst => (state.instruments[inst.id]?.count || 0) > 0);
+    const allUpgrades = UPGRADES.every(upg => state.purchasedUpgrades.includes(upg.id));
+    if (allInstruments && allUpgrades) {
+      localStorage.setItem('music_clicker_congrats_shown', '1');
+      setShowCongrats(true);
+    }
+  }, [state.instruments, state.purchasedUpgrades]);
+
   useAudioSync(state, audioInitialized);
 
   useEffect(() => {
@@ -341,6 +353,66 @@ export default function App() {
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: '#1a1a1a' }}>
+
+      {/* Congratulations modal */}
+      {showCongrats && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ background: 'rgba(0,0,0,0.75)' }}
+        >
+          <div
+            className="flex flex-col items-center gap-5 rounded-2xl px-10 py-10 text-center"
+            style={{
+              background: '#1e1e1e',
+              border: '2px solid #4ADE80',
+              boxShadow: '0 0 48px rgba(74,222,128,0.25)',
+              maxWidth: 440,
+              width: '90%',
+            }}
+          >
+            <div style={{ fontSize: 56, lineHeight: 1 }}>🎵</div>
+            <h2
+              className="font-bold tracking-wide"
+              style={{ fontSize: 28, color: '#86EFAC' }}
+            >
+              Congratulations!
+            </h2>
+            <p
+              className="font-medium leading-relaxed"
+              style={{ fontSize: 15, color: '#d1d5db' }}
+            >
+              You've assembled a full band and mastered every technique.
+              Your composition is complete — the stage is yours!
+            </p>
+            <div className="flex gap-3 pt-1">
+              <button
+                className="rounded-lg px-6 py-2.5 text-sm font-bold transition-colors"
+                style={{
+                  background: '#86EFAC',
+                  color: '#14532D',
+                  border: '2px solid #4ADE80',
+                }}
+                onClick={handleExport}
+              >
+                Export Masterpiece ↓
+              </button>
+              <button
+                className="rounded-lg px-6 py-2.5 text-sm font-bold transition-colors"
+                style={{
+                  background: 'transparent',
+                  color: '#9ca3af',
+                  border: '2px solid #374151',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.color = '#d1d5db'; e.currentTarget.style.borderColor = '#6b7280'; }}
+                onMouseLeave={e => { e.currentTarget.style.color = '#9ca3af'; e.currentTarget.style.borderColor = '#374151'; }}
+                onClick={() => setShowCongrats(false)}
+              >
+                Keep Playing
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Timeline pane – ~67% */}
       <div className="flex-1 min-w-0 border-r border-black/40">
         <TimelinePane
@@ -355,6 +427,7 @@ export default function App() {
           onReset={() => {
             reset();
             localStorage.removeItem('music_clicker_tutorial_done');
+            localStorage.removeItem('music_clicker_congrats_shown');
             window.location.reload();
           }}
         />
