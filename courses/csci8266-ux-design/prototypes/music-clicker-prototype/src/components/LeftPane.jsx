@@ -137,7 +137,7 @@ function InstrumentRow({ instrument, instState, onToggle, onRowClick }) {
 // ---------------------------------------------------------------------------
 // TimelinePane
 // ---------------------------------------------------------------------------
-export default function TimelinePane({ state, stats, onToggle, onRowClick, onTempoChange, onVolumeChange }) {
+export default function TimelinePane({ state, stats, onToggle, onRowClick, onTempoChange, onVolumeChange, onReset }) {
   return (
     <div className="flex flex-col h-full" style={{ background: '#2a2a2a' }}>
 
@@ -198,11 +198,24 @@ export default function TimelinePane({ state, stats, onToggle, onRowClick, onTem
         ))}
       </div>
 
-      {/* Export button */}
+      {/* Footer bar: reset left, export right */}
       <div
-        className="flex-shrink-0 flex items-center justify-end px-4 py-2 border-t border-black/40"
+        className="flex-shrink-0 flex items-center justify-between px-4 py-2 border-t border-black/40"
         style={{ background: '#2a2a2a' }}
       >
+        <button
+          className="text-xs font-medium tracking-wide transition-colors"
+          style={{ color: 'rgba(239,68,68,0.5)' }}
+          onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; }}
+          onMouseLeave={e => { e.currentTarget.style.color = 'rgba(239,68,68,0.5)'; }}
+          onClick={() => {
+            if (window.confirm('Reset all progress? This cannot be undone.')) {
+              onReset();
+            }
+          }}
+        >
+          Reset Progress
+        </button>
         <button
           className="text-gray-400 text-sm font-medium tracking-wide hover:text-gray-200 transition-colors"
           onClick={() => {}}

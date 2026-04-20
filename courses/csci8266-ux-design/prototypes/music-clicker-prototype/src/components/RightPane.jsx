@@ -81,7 +81,6 @@ export default function ShopPane({
   onBuyPhrase,
   onSetPhrase,
   onBuyUpgrade,
-  onReset,
   tutorialHighlight,
 }) {
   const { notes } = state;
@@ -286,31 +285,6 @@ export default function ShopPane({
           </div>
         )}
 
-        {/* Reset */}
-        <div className="pt-2 pb-4">
-          <button
-            className="w-full py-2 rounded-lg text-xs border transition-colors"
-            style={{
-              color: 'rgba(239,68,68,0.5)',
-              borderColor: 'rgba(127,29,29,0.3)',
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.color = '#ef4444';
-              e.currentTarget.style.borderColor = 'rgba(127,29,29,0.6)';
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.color = 'rgba(239,68,68,0.5)';
-              e.currentTarget.style.borderColor = 'rgba(127,29,29,0.3)';
-            }}
-            onClick={() => {
-              if (window.confirm('Reset all progress? This cannot be undone.')) {
-                onReset();
-              }
-            }}
-          >
-            Reset Save
-          </button>
-        </div>
       </div>
     </div>
   );

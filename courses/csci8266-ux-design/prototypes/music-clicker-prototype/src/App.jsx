@@ -296,6 +296,7 @@ export default function App() {
           onRowClick={handleRowClick}
           onTempoChange={handleTempoChange}
           onVolumeChange={handleVolumeChange}
+          onReset={reset}
         />
       </div>
 
@@ -308,7 +309,6 @@ export default function App() {
           onBuyPhrase={buyPhrase}
           onSetPhrase={setActivePhrase}
           onBuyUpgrade={buyUpgrade}
-          onReset={reset}
           tutorialHighlight={tutorialStepRef.current === 0 ? 'piano' : null}
         />
       </div>
