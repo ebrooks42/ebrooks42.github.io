@@ -22,8 +22,16 @@ export async function exportAudio(audioEngine, tempo, onProgress) {
   const streamDest = audioEngine.ctx.createMediaStreamDestination();
   audioEngine.masterGain.connect(streamDest);
 
-  // Pick best available container format
-  const candidates = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm'];
+  // Pick best available container format.
+  // Require explicit AAC codec for MP4 — Chrome supports 'audio/mp4' but
+  // encodes with Opus, producing a .mp4 that Windows cannot play.
+  // Only Safari supports 'audio/mp4;codecs=mp4a.40.2' (true AAC), so Chrome
+  // correctly falls through to webm here.
+  const candidates = [
+    'audio/mp4;codecs=mp4a.40.2', // AAC-LC in MP4 — Safari; plays on Windows/Mac
+    'audio/webm;codecs=opus',      // Chrome / Firefox
+    'audio/webm',                  // last-resort fallback
+  ];
   const mimeType = candidates.find(f => {
     try { return MediaRecorder.isTypeSupported(f); } catch { return false; }
   }) || 'audio/webm';
