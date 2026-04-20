@@ -106,11 +106,15 @@ export default function App() {
   } = useGameState();
 
   const [audioInitialized, setAudioInitialized] = useState(false);
-  const tutorialStepRef = useRef(0); // 0-based index, -1 = done
+  const tutorialStepRef = useRef(
+    localStorage.getItem('music_clicker_tutorial_done') ? -1 : 0
+  );
   const driverRef = useRef(null);
 
   // Initialize driver.js tutorial on mount
   useEffect(() => {
+    // Skip if already seen
+    if (tutorialStepRef.current === -1) return;
     const style = document.createElement('style');
     style.textContent = `
       .driver-popover {
@@ -171,10 +175,12 @@ export default function App() {
       steps: TUTORIAL_STEP_CONFIGS,
       onNextClick: () => {
         // Button is always Skip (early steps) or Done (last step) — always dismiss
+        localStorage.setItem('music_clicker_tutorial_done', '1');
         d.destroy();
         tutorialStepRef.current = -1;
       },
       onDestroyStarted: () => {
+        localStorage.setItem('music_clicker_tutorial_done', '1');
         d.destroy();
         tutorialStepRef.current = -1;
       },
@@ -296,7 +302,11 @@ export default function App() {
           onRowClick={handleRowClick}
           onTempoChange={handleTempoChange}
           onVolumeChange={handleVolumeChange}
-          onReset={reset}
+          onReset={() => {
+            reset();
+            localStorage.removeItem('music_clicker_tutorial_done');
+            window.location.reload();
+          }}
         />
       </div>
 
