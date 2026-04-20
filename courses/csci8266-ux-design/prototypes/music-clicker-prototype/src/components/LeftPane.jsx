@@ -1,53 +1,26 @@
 import React, { useMemo } from 'react';
-import { INSTRUMENTS } from '../data/gameData.js';
-
-// ---------------------------------------------------------------------------
-// Compute beat grid dots from a phrase
-// ---------------------------------------------------------------------------
-function getBeatDots(phrase, numCells = 8) {
-  if (!phrase) return new Array(numCells).fill(false);
-  const totalBeats = phrase.totalBeats || 4;
-  const filled = new Array(numCells).fill(false);
-
-  if (phrase.isDrum) {
-    phrase.hits.forEach(hit => {
-      const idx = Math.min(Math.floor((hit.time / totalBeats) * numCells), numCells - 1);
-      filled[idx] = true;
-    });
-  } else {
-    let beatPos = 0;
-    for (const note of phrase.notes) {
-      if (note.note !== 'REST') {
-        const idx = Math.min(Math.floor((beatPos / totalBeats) * numCells), numCells - 1);
-        filled[idx] = true;
-      }
-      beatPos += note.duration;
-    }
-  }
-
-  return filled;
-}
+import { INSTRUMENTS, getDefaultPattern } from '../data/gameData.js';
 
 // ---------------------------------------------------------------------------
 // Single instrument row
 // ---------------------------------------------------------------------------
-function InstrumentRow({ instrument, instState, onToggle, onRowClick }) {
+function InstrumentRow({ instrument, instState, onToggle, onBeatToggle }) {
   const count = instState?.count || 0;
   const active = instState?.active || false;
   const phraseIndex = instState?.activePhrase || 0;
   const phrase = instrument.phrases[phraseIndex];
 
-  const beatDots = useMemo(
-    () => (active ? getBeatDots(phrase) : []),
-    [active, phrase]
-  );
+  // Use saved custom pattern if present, else derive from phrase
+  const displayPattern = useMemo(() => {
+    if (instState?.customPattern) return instState.customPattern;
+    return getDefaultPattern(phrase);
+  }, [instState?.customPattern, phrase]);
 
   return (
     <div
-      className="flex items-stretch border-b border-black/25 cursor-pointer select-none"
+      className="flex items-stretch border-b border-black/25 select-none"
       data-instrument-row={instrument.id}
       style={{ minHeight: 52 }}
-      onClick={() => active && onRowClick(instrument.id)}
     >
       {/* Instrument control column */}
       <div
@@ -80,10 +53,7 @@ function InstrumentRow({ instrument, instState, onToggle, onRowClick }) {
               onToggle(instrument.id);
             }}
           >
-            <div
-              className="w-3 h-3 rounded-full bg-white/90 flex-shrink-0"
-              style={{ transform: active ? 'none' : 'none' }}
-            />
+            <div className="w-3 h-3 rounded-full bg-white/90 flex-shrink-0" />
             <span>{active ? 'ON' : 'OFF'}</span>
           </button>
         ) : (
@@ -101,23 +71,38 @@ function InstrumentRow({ instrument, instState, onToggle, onRowClick }) {
           className="flex-1 flex items-center px-1 py-1.5 gap-0.5"
           style={{ background: '#c0c0c0' }}
         >
-          {beatDots.map((filled, i) => (
+          {displayPattern.map((filled, i) => (
             <div
               key={i}
-              className="flex-1 h-full flex items-center justify-center rounded-sm"
+              className="flex-1 h-full flex items-center justify-center rounded-sm cursor-pointer"
               style={{
                 background: i % 2 === 0 ? '#a8a8a8' : '#b8b8b8',
                 minWidth: 0,
               }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onBeatToggle(instrument.id, i);
+              }}
             >
-              {filled && (
+              {filled ? (
                 <div
-                  className="rounded-full"
+                  className="rounded-full transition-transform duration-75 hover:scale-110"
                   style={{
                     width: '60%',
                     paddingTop: '60%',
                     background: '#FBBF24',
                     boxShadow: '0 1px 4px rgba(0,0,0,0.25)',
+                  }}
+                />
+              ) : (
+                <div
+                  className="rounded-full"
+                  style={{
+                    width: '40%',
+                    paddingTop: '40%',
+                    background: 'rgba(0,0,0,0)',
+                    border: '2px solid rgba(255,255,255,0.35)',
+                    boxSizing: 'border-box',
                   }}
                 />
               )}
@@ -137,7 +122,7 @@ function InstrumentRow({ instrument, instState, onToggle, onRowClick }) {
 // ---------------------------------------------------------------------------
 // TimelinePane
 // ---------------------------------------------------------------------------
-export default function TimelinePane({ state, stats, onToggle, onRowClick, onTempoChange, onVolumeChange, onReset }) {
+export default function TimelinePane({ state, stats, onToggle, onBeatToggle, onTempoChange, onVolumeChange, onReset }) {
   return (
     <div className="flex flex-col h-full" style={{ background: '#2a2a2a' }}>
 
@@ -193,7 +178,7 @@ export default function TimelinePane({ state, stats, onToggle, onRowClick, onTem
             instrument={inst}
             instState={state.instruments[inst.id]}
             onToggle={onToggle}
-            onRowClick={onRowClick}
+            onBeatToggle={onBeatToggle}
           />
         ))}
       </div>
