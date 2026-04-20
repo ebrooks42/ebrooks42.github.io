@@ -122,7 +122,7 @@ function InstrumentRow({ instrument, instState, onToggle, onBeatToggle }) {
 // ---------------------------------------------------------------------------
 // TimelinePane
 // ---------------------------------------------------------------------------
-export default function TimelinePane({ state, stats, onToggle, onBeatToggle, onTempoChange, onVolumeChange, onReset }) {
+export default function TimelinePane({ state, stats, onToggle, onBeatToggle, onTempoChange, onVolumeChange, onExport, exportProgress, onReset }) {
   return (
     <div className="flex flex-col h-full" style={{ background: '#2a2a2a' }}>
 
@@ -201,12 +201,29 @@ export default function TimelinePane({ state, stats, onToggle, onBeatToggle, onT
         >
           Reset Progress
         </button>
-        <button
-          className="text-gray-400 text-sm font-medium tracking-wide hover:text-gray-200 transition-colors"
-          onClick={() => {}}
-        >
-          Export ↓
-        </button>
+        {exportProgress !== null ? (
+          <div className="flex items-center gap-2">
+            <div
+              className="rounded-full overflow-hidden"
+              style={{ width: 80, height: 6, background: '#3a3a3a' }}
+            >
+              <div
+                className="h-full rounded-full transition-all duration-100"
+                style={{ width: `${Math.round(exportProgress * 100)}%`, background: '#86EFAC' }}
+              />
+            </div>
+            <span className="text-xs font-mono" style={{ color: '#86EFAC' }}>
+              {Math.round(exportProgress * 100)}%
+            </span>
+          </div>
+        ) : (
+          <button
+            className="text-gray-400 text-sm font-medium tracking-wide hover:text-gray-200 transition-colors"
+            onClick={onExport}
+          >
+            Export ↓
+          </button>
+        )}
       </div>
     </div>
   );

@@ -3,6 +3,7 @@ import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
 import { useGameState } from './store/useGameState.js';
 import { audioEngine } from './audio/audioEngine.js';
+import { exportAudio } from './audio/exportAudio.js';
 import { INSTRUMENTS, buildPhraseFromPattern } from './data/gameData.js';
 import TimelinePane from './components/LeftPane.jsx';
 import ShopPane from './components/RightPane.jsx';
@@ -114,6 +115,7 @@ export default function App() {
   } = useGameState();
 
   const [audioInitialized, setAudioInitialized] = useState(false);
+  const [exportState, setExportState] = useState(null); // null | { progress: 0–1 }
   const tutorialStepRef = useRef(
     localStorage.getItem('music_clicker_tutorial_done') ? -1 : 0
   );
@@ -308,6 +310,29 @@ export default function App() {
     audioEngine.setVolume(v / 100);
   }, [setVolume]);
 
+  const handleExport = useCallback(async () => {
+    if (exportState) return; // already recording
+    if (!audioInitialized) {
+      alert('Toggle an instrument on first to start playing, then export.');
+      return;
+    }
+    const anyActive = INSTRUMENTS.some(i => state.instruments[i.id]?.active && state.instruments[i.id]?.count > 0);
+    if (!anyActive) {
+      alert('Turn on at least one instrument before exporting.');
+      return;
+    }
+    setExportState({ progress: 0 });
+    try {
+      await exportAudio(audioEngine, state.tempo, (progress) => {
+        setExportState({ progress });
+      });
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setExportState(null);
+    }
+  }, [exportState, audioInitialized, state.instruments, state.tempo]);
+
   useAudioSync(state, audioInitialized);
 
   useEffect(() => {
@@ -325,6 +350,8 @@ export default function App() {
           onBeatToggle={handleBeatToggle}
           onTempoChange={handleTempoChange}
           onVolumeChange={handleVolumeChange}
+          onExport={handleExport}
+          exportProgress={exportState?.progress ?? null}
           onReset={() => {
             reset();
             localStorage.removeItem('music_clicker_tutorial_done');
