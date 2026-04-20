@@ -146,10 +146,10 @@ export default function TimelinePane({ state, stats, onToggle, onBeatToggle, onT
         </h1>
       </div>
 
-      {/* Empty composition space */}
-      <div className="flex-1 min-h-0" style={{ background: '#1e1e1e' }}>
-        {/* Tempo / volume controls in top area */}
-        <div className="px-6 pt-4 pb-2 space-y-2 opacity-60">
+      {/* Composition space: sliders + instrument icon cloud */}
+      <div className="flex-1 min-h-0 flex flex-col" style={{ background: '#1e1e1e' }}>
+        {/* Tempo / volume controls */}
+        <div className="flex-shrink-0 px-6 pt-4 pb-2 space-y-2 opacity-60">
           <div className="flex items-center gap-3">
             <span className="text-gray-400 text-xs w-10">BPM</span>
             <input
@@ -175,6 +175,29 @@ export default function TimelinePane({ state, stats, onToggle, onBeatToggle, onT
             <span className="text-gray-400 text-xs w-8 text-right font-mono">{state.volume}%</span>
           </div>
         </div>
+
+        {/* Instrument icon cloud — one icon per owned instrument */}
+        <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3">
+          <div className="flex flex-wrap gap-1">
+            {INSTRUMENTS.flatMap(inst => {
+              const count = state.instruments[inst.id]?.count || 0;
+              return Array.from({ length: count }, (_, i) => (
+                <div
+                  key={`${inst.id}-${i}`}
+                  className="rounded flex items-center justify-center flex-shrink-0"
+                  style={{
+                    width: 28,
+                    height: 28,
+                    background: inst.color,
+                    fontSize: inst.emoji.length > 1 ? 13 : 15,
+                  }}
+                >
+                  {inst.emoji}
+                </div>
+              ));
+            })}
+          </div>
+        </div>
       </div>
 
       {/* Instrument rows panel */}
@@ -192,15 +215,17 @@ export default function TimelinePane({ state, stats, onToggle, onBeatToggle, onT
 
       {/* Footer bar: reset left, export right */}
       <div
-        className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-t border-black/40 gap-3"
+        className="flex-shrink-0 flex items-center justify-center px-4 py-3 border-t border-black/40 gap-3"
         style={{ background: '#2a2a2a' }}
       >
         <button
-          className="flex-1 rounded-lg py-2.5 text-sm font-semibold tracking-wide transition-colors"
+          className="rounded-lg py-2.5 px-6 text-sm font-semibold tracking-wide transition-colors"
           style={{
             background: 'rgba(239,68,68,0.12)',
             color: 'rgba(239,68,68,0.7)',
             border: '1px solid rgba(239,68,68,0.25)',
+            minWidth: 110,
+            maxWidth: 160,
           }}
           onMouseEnter={e => {
             e.currentTarget.style.background = 'rgba(239,68,68,0.2)';
@@ -221,7 +246,7 @@ export default function TimelinePane({ state, stats, onToggle, onBeatToggle, onT
           Reset
         </button>
         {exportProgress !== null ? (
-          <div className="flex-1 flex items-center justify-center gap-2">
+          <div className="flex items-center gap-2" style={{ minWidth: 110, maxWidth: 160, justifyContent: 'center' }}>
             <div
               className="rounded-full overflow-hidden"
               style={{ width: 72, height: 6, background: '#3a3a3a' }}
@@ -237,11 +262,13 @@ export default function TimelinePane({ state, stats, onToggle, onBeatToggle, onT
           </div>
         ) : (
           <button
-            className="flex-1 rounded-lg py-2.5 text-sm font-semibold tracking-wide transition-colors"
+            className="rounded-lg py-2.5 px-6 text-sm font-semibold tracking-wide transition-colors"
             style={{
               background: 'rgba(134,239,172,0.12)',
               color: 'rgba(134,239,172,0.8)',
               border: '1px solid rgba(134,239,172,0.25)',
+              minWidth: 110,
+              maxWidth: 160,
             }}
             onMouseEnter={e => {
               e.currentTarget.style.background = 'rgba(134,239,172,0.2)';
