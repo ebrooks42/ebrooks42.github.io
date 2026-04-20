@@ -215,8 +215,16 @@ function gameReducer(state, action) {
       const newPattern = [...base];
       newPattern[cellIndex] = !newPattern[cellIndex];
 
+      // Award notes for composing: 4 at baseline, scaled by npc_multiplier upgrades
+      // (same multiplier that applies to regular clicks via Better Technique, etc.)
+      const { totalNPC } = computeStats(state);
+      const npcMultiplier = totalNPC / Math.max(state.npc, 1);
+      const editGain = 4 * npcMultiplier;
+
       return {
         ...state,
+        notes: state.notes + editGain,
+        totalNotesEarned: state.totalNotesEarned + editGain,
         instruments: {
           ...state.instruments,
           [instrumentId]: {
