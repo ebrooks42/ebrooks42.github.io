@@ -246,21 +246,12 @@ export default function App() {
     if (!audioInitialized) {
       audioEngine.init();
       setAudioInitialized(true);
-      INSTRUMENTS.forEach(inst => {
-        const instState = state.instruments[inst.id];
-        const count = instState?.count || 0;
-        const active = instState?.active || false;
-        if (count > 0 && active) {
-          const phraseIndex = instState?.activePhrase || 0;
-          const customPattern = instState?.customPattern || null;
-          const phraseData = customPattern
-            ? buildPhraseFromPattern(inst.id, customPattern)
-            : inst.phrases[phraseIndex];
-          audioEngine.startInstrument(inst.id, phraseData, inst.audioType || inst.id);
-        }
-      });
+      // Don't start instruments here — useAudioSync handles that once
+      // audioInitialized becomes true, using the correct post-action state.
+      // Starting instruments here would race with the action being dispatched
+      // in the same render batch, causing toggle/audio desync on first interaction.
     }
-  }, [audioInitialized, state.instruments]);
+  }, [audioInitialized]);
 
   const handleBuyInstrument = useCallback((id) => {
     initAudio();
