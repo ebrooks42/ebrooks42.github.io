@@ -18,11 +18,13 @@ function PhraseSection({ instrument, instState, notes, onBuyPhrase, onSetPhrase 
         return (
           <div
             key={phrase.id}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs select-none"
             style={{
               background: isActive ? `${instrument.color}22` : '#ffffff10',
               border: `1px solid ${isActive ? instrument.color + '55' : '#ffffff18'}`,
+              cursor: isUnlocked ? 'pointer' : 'default',
             }}
+            onClick={() => isUnlocked && onSetPhrase(instrument.id, i)}
           >
             <div className="flex-1 min-w-0">
               <span
@@ -41,16 +43,15 @@ function PhraseSection({ instrument, instState, notes, onBuyPhrase, onSetPhrase 
               )}
             </div>
             {isUnlocked ? (
-              <button
-                className="px-2 py-0.5 rounded text-xs font-semibold"
+              <div
+                className="px-2 py-0.5 rounded text-xs font-semibold pointer-events-none"
                 style={{
                   background: isActive ? instrument.color : `${instrument.color}33`,
                   color: isActive ? '#fff' : instrument.color,
                 }}
-                onClick={() => onSetPhrase(instrument.id, i)}
               >
                 {isActive ? 'Active' : 'Use'}
-              </button>
+              </div>
             ) : (
               <button
                 disabled={!canAfford || isFree}
@@ -59,7 +60,7 @@ function PhraseSection({ instrument, instState, notes, onBuyPhrase, onSetPhrase 
                   background: canAfford ? '#fbbf2433' : '#ffffff10',
                   color: canAfford ? '#fbbf24' : '#6b7280',
                 }}
-                onClick={() => canAfford && onBuyPhrase(instrument.id, i)}
+                onClick={(e) => { e.stopPropagation(); canAfford && onBuyPhrase(instrument.id, i); }}
               >
                 Unlock
               </button>

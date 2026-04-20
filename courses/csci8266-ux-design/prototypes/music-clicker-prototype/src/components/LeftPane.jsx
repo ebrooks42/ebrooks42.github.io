@@ -27,13 +27,20 @@ function InstrumentRow({ instrument, instState, onToggle, onBeatToggle }) {
         className="flex items-center gap-2 px-3 flex-shrink-0"
         style={{ width: 185, background: count > 0 ? '#222222' : '#1c1c1c' }}
       >
-        {/* Colored icon box */}
+        {/* Colored icon box — tappable to toggle when owned */}
         <div
           className="w-9 h-9 rounded flex items-center justify-center text-base flex-shrink-0 font-bold"
           style={{
             background: count > 0 ? instrument.color : '#3a3a3a',
             color: count > 0 ? '#fff' : '#555',
             fontSize: instrument.emoji.length > 1 ? 18 : 20,
+            cursor: count > 0 ? 'pointer' : 'default',
+          }}
+          onClick={(e) => {
+            if (count > 0) {
+              e.stopPropagation();
+              onToggle(instrument.id);
+            }
           }}
         >
           {instrument.emoji}
@@ -185,27 +192,39 @@ export default function TimelinePane({ state, stats, onToggle, onBeatToggle, onT
 
       {/* Footer bar: reset left, export right */}
       <div
-        className="flex-shrink-0 flex items-center justify-between px-4 py-2 border-t border-black/40"
+        className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-t border-black/40 gap-3"
         style={{ background: '#2a2a2a' }}
       >
         <button
-          className="text-xs font-medium tracking-wide transition-colors"
-          style={{ color: 'rgba(239,68,68,0.5)' }}
-          onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; }}
-          onMouseLeave={e => { e.currentTarget.style.color = 'rgba(239,68,68,0.5)'; }}
+          className="flex-1 rounded-lg py-2.5 text-sm font-semibold tracking-wide transition-colors"
+          style={{
+            background: 'rgba(239,68,68,0.12)',
+            color: 'rgba(239,68,68,0.7)',
+            border: '1px solid rgba(239,68,68,0.25)',
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.background = 'rgba(239,68,68,0.2)';
+            e.currentTarget.style.color = '#ef4444';
+            e.currentTarget.style.borderColor = 'rgba(239,68,68,0.5)';
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.background = 'rgba(239,68,68,0.12)';
+            e.currentTarget.style.color = 'rgba(239,68,68,0.7)';
+            e.currentTarget.style.borderColor = 'rgba(239,68,68,0.25)';
+          }}
           onClick={() => {
             if (window.confirm('Reset all progress? This cannot be undone.')) {
               onReset();
             }
           }}
         >
-          Reset Progress
+          Reset
         </button>
         {exportProgress !== null ? (
-          <div className="flex items-center gap-2">
+          <div className="flex-1 flex items-center justify-center gap-2">
             <div
               className="rounded-full overflow-hidden"
-              style={{ width: 80, height: 6, background: '#3a3a3a' }}
+              style={{ width: 72, height: 6, background: '#3a3a3a' }}
             >
               <div
                 className="h-full rounded-full transition-all duration-100"
@@ -218,7 +237,22 @@ export default function TimelinePane({ state, stats, onToggle, onBeatToggle, onT
           </div>
         ) : (
           <button
-            className="text-gray-400 text-sm font-medium tracking-wide hover:text-gray-200 transition-colors"
+            className="flex-1 rounded-lg py-2.5 text-sm font-semibold tracking-wide transition-colors"
+            style={{
+              background: 'rgba(134,239,172,0.12)',
+              color: 'rgba(134,239,172,0.8)',
+              border: '1px solid rgba(134,239,172,0.25)',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = 'rgba(134,239,172,0.2)';
+              e.currentTarget.style.color = '#86EFAC';
+              e.currentTarget.style.borderColor = 'rgba(134,239,172,0.5)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'rgba(134,239,172,0.12)';
+              e.currentTarget.style.color = 'rgba(134,239,172,0.8)';
+              e.currentTarget.style.borderColor = 'rgba(134,239,172,0.25)';
+            }}
             onClick={onExport}
           >
             Export ↓
