@@ -128,6 +128,8 @@ export default function App() {
   const [audioInitialized, setAudioInitialized] = useState(false);
   const [exportState, setExportState] = useState(null); // null | { progress: 0–1 }
   const [showCongrats, setShowCongrats] = useState(false);
+  const [activeBeat, setActiveBeat] = useState({}); // instrumentId → current cell (0-7)
+  const activeBeatRef = useRef({});
   const tutorialStepRef = useRef(
     localStorage.getItem('music_clicker_tutorial_done') ? -1 : 0
   );
@@ -356,6 +358,31 @@ export default function App() {
     }
   }, [state.instruments, state.purchasedUpgrades]);
 
+  // rAF loop: poll current beat cell for each active instrument.
+  // Only calls setState when the beat index actually changes (at most ~4/s
+  // at 120 BPM) so it doesn't cause excessive re-renders.
+  useEffect(() => {
+    let rafId;
+    const tick = () => {
+      if (audioEngine.initialized) {
+        const next = {};
+        INSTRUMENTS.forEach(inst => {
+          if (audioEngine.activeInstruments.has(inst.id)) {
+            next[inst.id] = audioEngine.getCurrentCellIndex(inst.id);
+          }
+        });
+        const prev = activeBeatRef.current;
+        if (INSTRUMENTS.some(inst => prev[inst.id] !== next[inst.id])) {
+          activeBeatRef.current = next;
+          setActiveBeat(next);
+        }
+      }
+      rafId = requestAnimationFrame(tick);
+    };
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, []);
+
   useAudioSync(state, audioInitialized);
 
   useEffect(() => {
@@ -429,6 +456,7 @@ export default function App() {
         <TimelinePane
           state={state}
           stats={stats}
+          activeBeat={activeBeat}
           onToggle={handleToggle}
           onBeatToggle={handleBeatToggle}
           onTempoChange={handleTempoChange}

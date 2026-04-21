@@ -4,7 +4,7 @@ import { INSTRUMENTS, getDefaultPattern } from '../data/gameData.js';
 // ---------------------------------------------------------------------------
 // Single instrument row
 // ---------------------------------------------------------------------------
-function InstrumentRow({ instrument, instState, onToggle, onBeatToggle }) {
+function InstrumentRow({ instrument, instState, onToggle, onBeatToggle, activeCellIndex }) {
   const count = instState?.count || 0;
   const active = instState?.active || false;
   const phraseIndex = instState?.activePhrase || 0;
@@ -83,7 +83,7 @@ function InstrumentRow({ instrument, instState, onToggle, onBeatToggle }) {
               key={i}
               className="flex-1 h-full flex items-center justify-center rounded-sm cursor-pointer"
               style={{
-                background: i % 2 === 0 ? '#a8a8a8' : '#b8b8b8',
+                background: i === activeCellIndex ? '#BFDBFE' : (i % 2 === 0 ? '#a8a8a8' : '#b8b8b8'),
                 minWidth: 0,
               }}
               onClick={(e) => {
@@ -129,7 +129,7 @@ function InstrumentRow({ instrument, instState, onToggle, onBeatToggle }) {
 // ---------------------------------------------------------------------------
 // TimelinePane
 // ---------------------------------------------------------------------------
-export default function TimelinePane({ state, stats, onToggle, onBeatToggle, onTempoChange, onVolumeChange, onExport, exportProgress, onReset }) {
+export default function TimelinePane({ state, stats, activeBeat, onToggle, onBeatToggle, onTempoChange, onVolumeChange, onExport, exportProgress, onReset }) {
   return (
     <div className="flex flex-col h-full" style={{ background: '#2a2a2a' }}>
 
@@ -209,6 +209,7 @@ export default function TimelinePane({ state, stats, onToggle, onBeatToggle, onT
             instState={state.instruments[inst.id]}
             onToggle={onToggle}
             onBeatToggle={onBeatToggle}
+            activeCellIndex={activeBeat?.[inst.id] ?? -1}
           />
         ))}
       </div>
