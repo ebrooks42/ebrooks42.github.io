@@ -9,6 +9,11 @@ import { NOTE_FREQUENCIES } from '../data/gameData.js';
 const LOOKAHEAD = 0.2;       // seconds to schedule ahead
 const SCHEDULER_INTERVAL = 50; // ms between scheduler runs
 
+// How far ahead of the actual beat the visual cursor starts its transition.
+// 1/5 means the highlight begins at 80% through the previous cell so it
+// arrives fully blue exactly on the downbeat. Tweak here to taste.
+export const VISUAL_LEAD_FRACTION = 1 / 5;
+
 class AudioEngine {
   constructor() {
     this.ctx = null;
@@ -557,11 +562,13 @@ class AudioEngine {
     const loopDur = state.phraseData.totalBeats * this._beatDuration();
     if (loopDur <= 0) return -1;
 
-    // elapsed since the most-recently-scheduled loop start.
-    // Modulo handles the lookahead window: if the scheduler has moved
-    // currentLoopStart ahead of ctx.currentTime, wrapping puts us at the
-    // correct position in the previous loop rather than going negative.
-    let elapsed = this.ctx.currentTime - state.currentLoopStart;
+    const cellDur = loopDur / numCells;
+
+    // Shift currentTime forward by the visual lead so the cursor starts
+    // transitioning to the next cell VISUAL_LEAD_FRACTION of a cell duration
+    // before the note actually sounds, arriving fully highlighted on the beat.
+    // Modulo handles the lookahead window gracefully.
+    let elapsed = (this.ctx.currentTime + VISUAL_LEAD_FRACTION * cellDur) - state.currentLoopStart;
     elapsed = ((elapsed % loopDur) + loopDur) % loopDur;
     return Math.min(Math.floor((elapsed / loopDur) * numCells), numCells - 1);
   }

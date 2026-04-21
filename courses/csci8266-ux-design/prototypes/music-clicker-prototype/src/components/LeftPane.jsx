@@ -1,10 +1,11 @@
 import React, { useMemo } from 'react';
 import { INSTRUMENTS, getDefaultPattern } from '../data/gameData.js';
+import { VISUAL_LEAD_FRACTION } from '../audio/audioEngine.js';
 
 // ---------------------------------------------------------------------------
 // Single instrument row
 // ---------------------------------------------------------------------------
-function InstrumentRow({ instrument, instState, onToggle, onBeatToggle, activeCellIndex }) {
+function InstrumentRow({ instrument, instState, onToggle, onBeatToggle, activeCellIndex, beatTransitionMs }) {
   const count = instState?.count || 0;
   const active = instState?.active || false;
   const phraseIndex = instState?.activePhrase || 0;
@@ -84,7 +85,7 @@ function InstrumentRow({ instrument, instState, onToggle, onBeatToggle, activeCe
               className="flex-1 h-full flex items-center justify-center rounded-sm cursor-pointer"
               style={{
                 background: i === activeCellIndex ? '#BFDBFE' : (i % 2 === 0 ? '#a8a8a8' : '#b8b8b8'),
-                transition: 'background 0.15s ease-out',
+                transition: `background ${beatTransitionMs}ms ease-out`,
                 minWidth: 0,
               }}
               onClick={(e) => {
@@ -131,6 +132,10 @@ function InstrumentRow({ instrument, instState, onToggle, onBeatToggle, activeCe
 // TimelinePane
 // ---------------------------------------------------------------------------
 export default function TimelinePane({ state, stats, activeBeat, onToggle, onBeatToggle, onTempoChange, onVolumeChange, onExport, exportProgress, onReset }) {
+  // Cell duration at current BPM: each phrase is 4 beats, split into 8 cells
+  const cellDurSec = (4 / 8) * (60 / state.tempo);
+  const beatTransitionMs = Math.round(VISUAL_LEAD_FRACTION * cellDurSec * 1000);
+
   return (
     <div className="flex flex-col h-full" style={{ background: '#2a2a2a' }}>
 
@@ -211,6 +216,7 @@ export default function TimelinePane({ state, stats, activeBeat, onToggle, onBea
             onToggle={onToggle}
             onBeatToggle={onBeatToggle}
             activeCellIndex={activeBeat?.[inst.id] ?? -1}
+            beatTransitionMs={beatTransitionMs}
           />
         ))}
       </div>
