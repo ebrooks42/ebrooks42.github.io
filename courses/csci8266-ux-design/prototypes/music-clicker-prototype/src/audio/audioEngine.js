@@ -60,26 +60,53 @@ class AudioEngine {
   // Instrument scheduling
   // -------------------------------------------------------------------------
 
-  startInstrument(id, phraseData, instrumentType) {
+  startInstrument(id, phraseData, instrumentType, startTime) {
     if (!this.initialized) return;
-    const now = this.ctx.currentTime;
+    const t = startTime ?? this.ctx.currentTime;
     // If already running this id, restart with new phrase
     if (this.activeInstruments.has(id)) {
       const existing = this.activeInstruments.get(id);
       existing.phraseData = phraseData;
       existing.type = instrumentType;
       existing.noteIndex = 0;
-      existing.nextNoteTime = now;
-      existing.currentLoopStart = now;
+      existing.nextNoteTime = t;
+      existing.currentLoopStart = t;
       return;
     }
     this.activeInstruments.set(id, {
       phraseData,
       type: instrumentType,
       noteIndex: 0,
-      nextNoteTime: now,
-      currentLoopStart: now,
+      nextNoteTime: t,
+      currentLoopStart: t,
     });
+  }
+
+  // Returns the soonest upcoming loop boundary across all active instruments,
+  // so a newly toggled instrument can wait and join on the downbeat.
+  // Returns null if no instruments are currently playing.
+  getNextLoopBoundary() {
+    if (!this.initialized || !this.ctx) return null;
+    const now = this.ctx.currentTime;
+    let soonest = Infinity;
+
+    for (const [, state] of this.activeInstruments) {
+      if (!state.phraseData || state.currentLoopStart === undefined) continue;
+      const loopDur = state.phraseData.totalBeats * this._beatDuration();
+      if (loopDur <= 0) continue;
+
+      // currentLoopStart is the most recently scheduled loop's start time.
+      // If it's still in the future the scheduler queued it ahead of time —
+      // that IS the next boundary. If it's in the past, the next boundary
+      // is one loop duration later.
+      const boundary = state.currentLoopStart > now
+        ? state.currentLoopStart
+        : state.currentLoopStart + loopDur;
+
+      if (boundary < soonest) soonest = boundary;
+    }
+
+    return soonest === Infinity ? null : soonest;
   }
 
   stopInstrument(id) {
