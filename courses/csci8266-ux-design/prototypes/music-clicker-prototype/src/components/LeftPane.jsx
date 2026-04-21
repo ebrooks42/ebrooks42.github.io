@@ -84,6 +84,7 @@ function InstrumentRow({ instrument, instState, onToggle, onBeatToggle, activeCe
               className="flex-1 h-full flex items-center justify-center rounded-sm cursor-pointer"
               style={{
                 background: i === activeCellIndex ? '#BFDBFE' : (i % 2 === 0 ? '#a8a8a8' : '#b8b8b8'),
+                transition: 'background 0.15s ease-out',
                 minWidth: 0,
               }}
               onClick={(e) => {
