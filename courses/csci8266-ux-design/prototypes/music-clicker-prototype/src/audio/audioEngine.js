@@ -62,20 +62,23 @@ class AudioEngine {
 
   startInstrument(id, phraseData, instrumentType) {
     if (!this.initialized) return;
+    const now = this.ctx.currentTime;
     // If already running this id, restart with new phrase
     if (this.activeInstruments.has(id)) {
       const existing = this.activeInstruments.get(id);
       existing.phraseData = phraseData;
       existing.type = instrumentType;
       existing.noteIndex = 0;
-      existing.nextNoteTime = this.ctx.currentTime;
+      existing.nextNoteTime = now;
+      existing.currentLoopStart = now;
       return;
     }
     this.activeInstruments.set(id, {
       phraseData,
       type: instrumentType,
       noteIndex: 0,
-      nextNoteTime: this.ctx.currentTime,
+      nextNoteTime: now,
+      currentLoopStart: now,
     });
   }
 
@@ -137,6 +140,7 @@ class AudioEngine {
       }
       while (state.nextNoteTime < deadline) {
         const loopStart = state.nextNoteTime;
+        state.currentLoopStart = loopStart; // record for UI cursor
         // Schedule all hits in this loop
         for (const hit of phraseData.hits) {
           const hitTime = loopStart + hit.time * beatDur;
@@ -152,6 +156,9 @@ class AudioEngine {
       if (!notes || notes.length === 0) return;
 
       while (state.nextNoteTime < deadline) {
+        if (state.noteIndex === 0) {
+          state.currentLoopStart = state.nextNoteTime; // new loop starting here
+        }
         const note = notes[state.noteIndex % notes.length];
         const freq = NOTE_FREQUENCIES[note.note] || 0;
         const duration = note.duration * beatDur;
@@ -511,6 +518,25 @@ class AudioEngine {
     env.connect(this.masterGain);
     noise.start(time);
     noise.stop(time + 0.06);
+  }
+
+  // Returns the 0-based cell index (out of numCells) currently being heard
+  // for the given instrument. Returns -1 if not playing or not yet started.
+  getCurrentCellIndex(id, numCells = 8) {
+    if (!this.initialized || !this.ctx) return -1;
+    const state = this.activeInstruments.get(id);
+    if (!state || !state.phraseData || state.currentLoopStart === undefined) return -1;
+
+    const loopDur = state.phraseData.totalBeats * this._beatDuration();
+    if (loopDur <= 0) return -1;
+
+    // elapsed since the most-recently-scheduled loop start.
+    // Modulo handles the lookahead window: if the scheduler has moved
+    // currentLoopStart ahead of ctx.currentTime, wrapping puts us at the
+    // correct position in the previous loop rather than going negative.
+    let elapsed = this.ctx.currentTime - state.currentLoopStart;
+    elapsed = ((elapsed % loopDur) + loopDur) % loopDur;
+    return Math.min(Math.floor((elapsed / loopDur) * numCells), numCells - 1);
   }
 
   // -------------------------------------------------------------------------
