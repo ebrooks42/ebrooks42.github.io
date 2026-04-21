@@ -95,8 +95,8 @@ function InstrumentRow({ instrument, instState, onToggle, onBeatToggle }) {
                 <div
                   className="rounded-full transition-transform duration-75 hover:scale-110"
                   style={{
-                    width: '60%',
-                    paddingTop: '60%',
+                    width: 'min(60%, 28px)',
+                    aspectRatio: '1',
                     background: '#FBBF24',
                     boxShadow: '0 1px 4px rgba(0,0,0,0.25)',
                   }}
@@ -105,8 +105,8 @@ function InstrumentRow({ instrument, instState, onToggle, onBeatToggle }) {
                 <div
                   className="rounded-full"
                   style={{
-                    width: '40%',
-                    paddingTop: '40%',
+                    width: 'min(40%, 18px)',
+                    aspectRatio: '1',
                     background: 'rgba(0,0,0,0)',
                     border: '2px solid rgba(255,255,255,0.35)',
                     boxSizing: 'border-box',
