@@ -46,11 +46,20 @@ function useAudioSync(state, audioInitialized) {
       const shouldPlay = count > 0 && active;
       const wasShouldPlay = prevCount > 0 && prevActive;
       const patternChanged = customPattern !== prevCustomPattern;
+      const phraseChanged = phraseIndex !== prevPhrase;
 
-      if (shouldPlay && (!wasShouldPlay || phraseIndex !== prevPhrase || patternChanged)) {
-        audioEngine.startInstrument(inst.id, phraseData, inst.audioType || inst.id);
-      } else if (!shouldPlay && wasShouldPlay) {
+      if (!shouldPlay && wasShouldPlay) {
         audioEngine.stopInstrument(inst.id);
+      } else if (shouldPlay && !wasShouldPlay) {
+        // Instrument just turned on — start fresh
+        audioEngine.startInstrument(inst.id, phraseData, inst.audioType || inst.id);
+      } else if (shouldPlay && phraseChanged) {
+        // Phrase selection changed — restart from the new phrase's beginning
+        audioEngine.startInstrument(inst.id, phraseData, inst.audioType || inst.id);
+      } else if (shouldPlay && patternChanged) {
+        // Beat grid edit — swap phrase data in-place without resetting timing
+        // so all instruments stay in sync
+        audioEngine.patchInstrumentPhrase(inst.id, phraseData, inst.audioType || inst.id);
       }
     });
   }, [state, audioInitialized]);

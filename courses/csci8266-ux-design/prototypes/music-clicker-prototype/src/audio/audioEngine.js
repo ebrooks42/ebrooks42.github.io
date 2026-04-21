@@ -97,6 +97,18 @@ class AudioEngine {
     }
   }
 
+  // Swap phrase data without resetting position or timing.
+  // For melodic instruments the current loop continues from the same noteIndex;
+  // for drums the already-scheduled hits play out and the new pattern takes
+  // effect on the next loop. Either way no desync is introduced.
+  patchInstrumentPhrase(id, phraseData, instrumentType) {
+    if (!this.activeInstruments.has(id)) return;
+    const state = this.activeInstruments.get(id);
+    state.phraseData = phraseData;
+    state.type = instrumentType;
+    // noteIndex and nextNoteTime are intentionally left unchanged
+  }
+
   // -------------------------------------------------------------------------
   // Scheduler loop
   // -------------------------------------------------------------------------
