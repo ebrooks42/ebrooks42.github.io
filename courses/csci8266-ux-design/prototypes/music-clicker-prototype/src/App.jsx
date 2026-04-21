@@ -51,8 +51,10 @@ function useAudioSync(state, audioInitialized) {
       if (!shouldPlay && wasShouldPlay) {
         audioEngine.stopInstrument(inst.id);
       } else if (shouldPlay && !wasShouldPlay) {
-        // Instrument just turned on — start fresh
-        audioEngine.startInstrument(inst.id, phraseData, inst.audioType || inst.id);
+        // Instrument just turned on — align to next loop boundary so it
+        // doesn't start mid-phrase and fall out of sync with other instruments
+        const syncTime = audioEngine.getNextLoopBoundary() ?? undefined;
+        audioEngine.startInstrument(inst.id, phraseData, inst.audioType || inst.id, syncTime);
       } else if (shouldPlay && phraseChanged) {
         // Phrase selection changed — restart from the new phrase's beginning
         audioEngine.startInstrument(inst.id, phraseData, inst.audioType || inst.id);
