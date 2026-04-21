@@ -175,6 +175,9 @@ class AudioEngine {
       case 'synth':
         this._synthSynth(freq, time, duration);
         break;
+      case 'triangle':
+        this._synthTriangle(freq, time, duration);
+        break;
       case 'violin':
         this._synthViolin(freq, time, duration);
         break;
@@ -290,6 +293,36 @@ class AudioEngine {
 
     osc.start(time);
     osc.stop(time + duration + 0.3);
+  }
+
+  _synthTriangle(freq, time, duration) {
+    const ctx = this.ctx;
+    // A struck metal bar (triangle) has inharmonic overtones at roughly
+    // 2.76× and 5.40× the fundamental — this is what gives it that bright
+    // metallic "ting". Each partial rings out with a long exponential decay
+    // regardless of the note's nominal duration.
+    const ringTime = Math.max(duration + 0.3, 1.8);
+    const partials = [
+      { ratio: 1,    gain: 0.45 },
+      { ratio: 2.76, gain: 0.18 },
+      { ratio: 5.40, gain: 0.07 },
+    ];
+
+    partials.forEach(({ ratio, gain: peak }) => {
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq * ratio, time);
+
+      const env = ctx.createGain();
+      env.gain.setValueAtTime(0, time);
+      env.gain.linearRampToValueAtTime(peak, time + 0.001); // near-instant strike
+      env.gain.exponentialRampToValueAtTime(0.001, time + ringTime);
+
+      osc.connect(env);
+      env.connect(this.masterGain);
+      osc.start(time);
+      osc.stop(time + ringTime + 0.05);
+    });
   }
 
   _synthViolin(freq, time, duration) {
