@@ -479,12 +479,33 @@ export function getDefaultPattern(phrase, numCells = 8) {
   return filled;
 }
 
-// Build an audio-engine-compatible phraseData from an 8-cell boolean pattern
-export function buildPhraseFromPattern(instrumentId, pattern) {
+// Derive one representative note per step cell from a phrase.
+// Uses the same time-bucketing as getDefaultPattern so the notes
+// align with the visual dots shown in the beat grid.
+function getPhraseStepNotes(phrase, numCells = 8) {
+  if (!phrase || phrase.isDrum) return null;
+  const totalBeats = phrase.totalBeats || 4;
+  // Start with the fallback scale so every cell always has a note
+  const fallback = STEP_NOTES; // looked up by caller
+  const result = new Array(numCells).fill(null);
+  let beatPos = 0;
+  for (const note of phrase.notes) {
+    if (note.note !== 'REST') {
+      const idx = Math.min(Math.floor((beatPos / totalBeats) * numCells), numCells - 1);
+      if (result[idx] === null) result[idx] = note.note; // first note wins per cell
+    }
+    beatPos += note.duration;
+  }
+  return result; // may still contain nulls for empty cells
+}
+
+// Build an audio-engine-compatible phraseData from an 8-cell boolean pattern.
+// Pass the currently active phrase so the step notes match what was selected.
+export function buildPhraseFromPattern(instrumentId, pattern, activePhrase) {
   const CELL_BEATS = 0.5;
   const totalBeats = pattern.length * CELL_BEATS;
 
-  if (instrumentId === 'drums') {
+  if (instrumentId === 'drums' || activePhrase?.isDrum) {
     const hits = [];
     pattern.forEach((active, i) => {
       if (active) hits.push({ drum: STEP_DRUMS[i], time: i * CELL_BEATS });
@@ -492,9 +513,11 @@ export function buildPhraseFromPattern(instrumentId, pattern) {
     return { isDrum: true, hits, totalBeats };
   }
 
-  const scaleNotes = STEP_NOTES[instrumentId] || new Array(pattern.length).fill('C4');
+  // Prefer notes extracted from the active phrase; fall back to the generic scale
+  const phraseStepNotes = activePhrase ? getPhraseStepNotes(activePhrase, pattern.length) : null;
+  const fallbackScale = STEP_NOTES[instrumentId] || new Array(pattern.length).fill('C4');
   const notes = pattern.map((active, i) => ({
-    note: active ? scaleNotes[i] : 'REST',
+    note: active ? (phraseStepNotes?.[i] ?? fallbackScale[i]) : 'REST',
     duration: CELL_BEATS,
   }));
   return { notes, totalBeats };

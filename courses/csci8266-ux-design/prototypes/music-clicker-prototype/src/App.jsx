@@ -36,10 +36,12 @@ function useAudioSync(state, audioInitialized) {
       const prevPhrase = prevInstState?.activePhrase || 0;
       const prevCustomPattern = prevInstState?.customPattern || null;
 
-      // Use custom step-sequencer pattern if set, otherwise use the phrase
+      // Use custom step-sequencer pattern if set, otherwise use the phrase.
+      // Pass the active phrase so edited beats keep the correct notes.
+      const activePhrase = inst.phrases[phraseIndex];
       const phraseData = customPattern
-        ? buildPhraseFromPattern(inst.id, customPattern)
-        : inst.phrases[phraseIndex];
+        ? buildPhraseFromPattern(inst.id, customPattern, activePhrase)
+        : activePhrase;
 
       const shouldPlay = count > 0 && active;
       const wasShouldPlay = prevCount > 0 && prevActive;
