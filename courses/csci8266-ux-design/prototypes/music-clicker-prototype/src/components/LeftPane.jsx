@@ -1,11 +1,12 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { INSTRUMENTS, getDefaultPattern } from '../data/gameData.js';
 import { VISUAL_LEAD_FRACTION } from '../audio/audioEngine.js';
+import MidiEditorModal from './MidiEditorModal.jsx';
 
 // ---------------------------------------------------------------------------
 // Single instrument row
 // ---------------------------------------------------------------------------
-function InstrumentRow({ instrument, instState, onToggle, onBeatToggle, activeCellIndex, beatTransitionMs }) {
+function InstrumentRow({ instrument, instState, onToggle, onBeatToggle, onOpenMidiEditor, midiUnlocked, activeCellIndex, beatTransitionMs }) {
   const count = instState?.count || 0;
   const active = instState?.active || false;
   const phraseIndex = instState?.activePhrase || 0;
@@ -76,47 +77,103 @@ function InstrumentRow({ instrument, instState, onToggle, onBeatToggle, activeCe
       {active ? (
         <div
           data-tutorial-beatgrid={instrument.id}
-          className="flex-1 flex items-center px-1 py-1.5 gap-0.5"
+          className="flex-1 flex items-center"
           style={{ background: '#c0c0c0' }}
         >
-          {displayPattern.map((filled, i) => (
+          {/* Step cells */}
+          <div className="flex-1 flex items-center px-1 py-1.5 gap-0.5 min-w-0" style={{ height: '100%' }}>
+            {displayPattern.map((filled, i) => (
+              <div
+                key={i}
+                className="flex-1 h-full flex items-center justify-center rounded-sm cursor-pointer"
+                style={{
+                  background: i === activeCellIndex ? '#BFDBFE' : (i % 2 === 0 ? '#a8a8a8' : '#b8b8b8'),
+                  transition: `background ${beatTransitionMs}ms ease-out`,
+                  minWidth: 0,
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onBeatToggle(instrument.id, i);
+                }}
+              >
+                {filled ? (
+                  <div
+                    className="rounded-full transition-transform duration-75 hover:scale-110"
+                    style={{
+                      width: 'min(60%, 28px)',
+                      aspectRatio: '1',
+                      background: '#FBBF24',
+                      boxShadow: '0 1px 4px rgba(0,0,0,0.25)',
+                    }}
+                  />
+                ) : (
+                  <div
+                    className="rounded-full"
+                    style={{
+                      width: 'min(40%, 18px)',
+                      aspectRatio: '1',
+                      background: 'rgba(0,0,0,0)',
+                      border: '2px solid rgba(255,255,255,0.35)',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Right-edge wand/spacer — always rendered to keep rows aligned */}
+          {phrase?.isDrum ? (
+            // Drums: invisible spacer so beat grid width matches melodic rows
             <div
-              key={i}
-              className="flex-1 h-full flex items-center justify-center rounded-sm cursor-pointer"
+              className="flex-shrink-0"
               style={{
-                background: i === activeCellIndex ? '#BFDBFE' : (i % 2 === 0 ? '#a8a8a8' : '#b8b8b8'),
-                transition: `background ${beatTransitionMs}ms ease-out`,
-                minWidth: 0,
+                width: 36,
+                height: '100%',
+                borderLeft: '1px solid rgba(0,0,0,0.15)',
+                background: 'rgba(0,0,0,0.12)',
               }}
+            />
+          ) : midiUnlocked ? (
+            // Melodic + upgrade owned: active wand button
+            <button
+              className="flex-shrink-0 flex items-center justify-center"
+              style={{
+                width: 36,
+                height: '100%',
+                fontSize: 16,
+                background: 'rgba(0,0,0,0.12)',
+                borderLeft: '1px solid rgba(0,0,0,0.15)',
+                cursor: 'pointer',
+                color: instState?.midiNotes ? instrument.color : 'rgba(0,0,0,0.45)',
+              }}
+              title="Note Editor"
               onClick={(e) => {
                 e.stopPropagation();
-                onBeatToggle(instrument.id, i);
+                onOpenMidiEditor(instrument.id);
               }}
             >
-              {filled ? (
-                <div
-                  className="rounded-full transition-transform duration-75 hover:scale-110"
-                  style={{
-                    width: 'min(60%, 28px)',
-                    aspectRatio: '1',
-                    background: '#FBBF24',
-                    boxShadow: '0 1px 4px rgba(0,0,0,0.25)',
-                  }}
-                />
-              ) : (
-                <div
-                  className="rounded-full"
-                  style={{
-                    width: 'min(40%, 18px)',
-                    aspectRatio: '1',
-                    background: 'rgba(0,0,0,0)',
-                    border: '2px solid rgba(255,255,255,0.35)',
-                    boxSizing: 'border-box',
-                  }}
-                />
-              )}
+              🪄
+            </button>
+          ) : (
+            // Melodic + upgrade NOT owned: grayed wand with tooltip
+            <div
+              className="flex-shrink-0 flex items-center justify-center"
+              style={{
+                width: 36,
+                height: '100%',
+                fontSize: 16,
+                background: 'rgba(0,0,0,0.12)',
+                borderLeft: '1px solid rgba(0,0,0,0.15)',
+                cursor: 'not-allowed',
+                color: 'rgba(0,0,0,0.22)',
+                filter: 'grayscale(1)',
+              }}
+              title="Requires the 'Advanced Phrase Editor' upgrade to unlock"
+            >
+              🪄
             </div>
-          ))}
+          )}
         </div>
       ) : (
         <div
@@ -131,13 +188,28 @@ function InstrumentRow({ instrument, instState, onToggle, onBeatToggle, activeCe
 // ---------------------------------------------------------------------------
 // TimelinePane
 // ---------------------------------------------------------------------------
-export default function TimelinePane({ state, stats, activeBeat, onToggle, onBeatToggle, onTempoChange, onVolumeChange, onExport, exportProgress, onReset }) {
+export default function TimelinePane({ state, stats, activeBeat, onToggle, onBeatToggle, onSetMidiPattern, midiUnlocked, onTempoChange, onVolumeChange, onExport, exportProgress, onReset }) {
+  const [midiEditId, setMidiEditId] = useState(null);
   // Cell duration at current BPM: each phrase is 4 beats, split into 8 cells
   const cellDurSec = (4 / 8) * (60 / state.tempo);
   const beatTransitionMs = Math.round(VISUAL_LEAD_FRACTION * cellDurSec * 1000);
 
+  // Instrument for the currently-open MIDI editor
+  const midiEditInstrument = midiEditId ? INSTRUMENTS.find(i => i.id === midiEditId) : null;
+  const midiEditInstState = midiEditId ? state.instruments[midiEditId] : null;
+
   return (
     <div className="flex flex-col h-full" style={{ background: '#2a2a2a' }}>
+
+      {/* MIDI editor modal */}
+      {midiEditInstrument && midiEditInstState && (
+        <MidiEditorModal
+          instrument={midiEditInstrument}
+          instState={midiEditInstState}
+          onClose={() => setMidiEditId(null)}
+          onSetMidiPattern={onSetMidiPattern}
+        />
+      )}
 
       {/* Header */}
       <div
@@ -215,6 +287,8 @@ export default function TimelinePane({ state, stats, activeBeat, onToggle, onBea
             instState={state.instruments[inst.id]}
             onToggle={onToggle}
             onBeatToggle={onBeatToggle}
+            onOpenMidiEditor={setMidiEditId}
+            midiUnlocked={midiUnlocked}
             activeCellIndex={activeBeat?.[inst.id] ?? -1}
             beatTransitionMs={beatTransitionMs}
           />

@@ -4,7 +4,7 @@ import { INSTRUMENTS, UPGRADES, getInstrumentCost, formatNumber } from '../data/
 // ---------------------------------------------------------------------------
 // Phrase upgrade section (expandable, shown inside instrument upgrade dropdown)
 // ---------------------------------------------------------------------------
-function PhraseSection({ instrument, instState, notes, onBuyPhrase, onSetPhrase }) {
+function PhraseSection({ instrument, instState, notes, onBuyPhrase, onSetPhrase, pendingChange }) {
   return (
     <div className="pt-1 pb-2 px-3 space-y-1.5">
       <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Phrases</div>
@@ -49,8 +49,9 @@ function PhraseSection({ instrument, instState, notes, onBuyPhrase, onSetPhrase 
                   background: isActive ? instrument.color : `${instrument.color}33`,
                   color: isActive ? '#fff' : instrument.color,
                 }}
+                title={isActive && pendingChange ? 'Switching at next loop boundary…' : undefined}
               >
-                {isActive ? 'Active' : 'Use'}
+                {isActive ? (pendingChange ? '🕐' : 'Active') : 'Use'}
               </div>
             ) : (
               <button
@@ -83,6 +84,7 @@ export default function ShopPane({
   onSetPhrase,
   onBuyUpgrade,
   tutorialHighlight,
+  pendingPhraseChange,
 }) {
   const { notes } = state;
   const [instrumentsOpen, setInstrumentsOpen] = useState(true);
@@ -237,6 +239,7 @@ export default function ShopPane({
                     notes={notes}
                     onBuyPhrase={onBuyPhrase}
                     onSetPhrase={onSetPhrase}
+                    pendingChange={!!pendingPhraseChange?.[inst.id]}
                   />
                 </div>
               )}

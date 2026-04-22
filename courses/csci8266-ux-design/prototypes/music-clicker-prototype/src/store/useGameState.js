@@ -1,5 +1,5 @@
 import { useReducer, useEffect, useRef, useCallback } from 'react';
-import { INSTRUMENTS, UPGRADES, getInstrumentCost, getDefaultPattern } from '../data/gameData.js';
+import { INSTRUMENTS, UPGRADES, getInstrumentCost, getDefaultPattern, STEP_NOTES, getPhraseStepNotes } from '../data/gameData.js';
 
 const SAVE_KEY = 'music_clicker_save_v2';
 const TICK_INTERVAL = 100;
@@ -16,7 +16,8 @@ function buildInitialState() {
       activePhrase: 0,
       active: false,
       unlockedPhrases: [false, false, false],
-      customPattern: null, // null = use default phrase; array of 8 booleans = step sequencer
+      customPattern: null, // null = use default phrase; boolean[] = step sequencer on/off
+      midiNotes: null,     // null = not using MIDI editor; (string|null)[] = per-step pitch
     };
   });
 
@@ -84,6 +85,17 @@ function gameReducer(state, action) {
         ...state,
         notes: state.notes + totalNPC,
         totalNotesEarned: state.totalNotesEarned + totalNPC,
+      };
+    }
+
+    case 'MIDI_EDIT': {
+      // Earns 100× NPC per debounced MIDI editor interaction
+      const { totalNPC } = computeStats(state);
+      const gain = 100 * totalNPC;
+      return {
+        ...state,
+        notes: state.notes + gain,
+        totalNotesEarned: state.totalNotesEarned + gain,
       };
     }
 
@@ -184,6 +196,7 @@ function gameReducer(state, action) {
             ...current,
             activePhrase: phraseIndex,
             customPattern: null, // reset step sequencer when switching phrases
+            midiNotes: null,
           },
         },
       };
@@ -210,11 +223,6 @@ function gameReducer(state, action) {
       const current = state.instruments[instrumentId];
       const phrase = inst.phrases[current.activePhrase || 0];
 
-      // Seed from default pattern on first edit
-      const base = current.customPattern || getDefaultPattern(phrase);
-      const newPattern = [...base];
-      newPattern[cellIndex] = !newPattern[cellIndex];
-
       // Award notes only if caller signals it's time (debounced externally)
       const noteUpdate = action.earnNotes ? (() => {
         const { totalNPC } = computeStats(state);
@@ -223,15 +231,54 @@ function gameReducer(state, action) {
         return { notes: state.notes + editGain, totalNotesEarned: state.totalNotesEarned + editGain };
       })() : { notes: state.notes, totalNotesEarned: state.totalNotesEarned };
 
+      // If MIDI editor has been used, sync both midiNotes and customPattern
+      if (current.midiNotes) {
+        const newMidi = [...current.midiNotes];
+        if (newMidi[cellIndex] !== null) {
+          newMidi[cellIndex] = null; // toggle off
+        } else {
+          // Toggle on: pick the best note from the phrase, fall back to scale
+          const phraseNotes = getPhraseStepNotes(phrase, 8);
+          const fallback = STEP_NOTES[inst.id] || new Array(8).fill('C4');
+          newMidi[cellIndex] = phraseNotes?.[cellIndex] ?? fallback[cellIndex];
+        }
+        const newPattern = newMidi.map(n => n !== null);
+        return {
+          ...state,
+          ...noteUpdate,
+          instruments: {
+            ...state.instruments,
+            [instrumentId]: { ...current, midiNotes: newMidi, customPattern: newPattern },
+          },
+        };
+      }
+
+      // Standard step-sequencer path (no MIDI notes set)
+      const base = current.customPattern || getDefaultPattern(phrase);
+      const newPattern = [...base];
+      newPattern[cellIndex] = !newPattern[cellIndex];
+
       return {
         ...state,
         ...noteUpdate,
         instruments: {
           ...state.instruments,
-          [instrumentId]: {
-            ...current,
-            customPattern: newPattern,
-          },
+          [instrumentId]: { ...current, customPattern: newPattern },
+        },
+      };
+    }
+
+    case 'SET_MIDI_PATTERN': {
+      const { instrumentId, midiNotes } = action;
+      const current = state.instruments[instrumentId];
+      if (!current) return state;
+      // customPattern is auto-derived: true wherever a note is present
+      const newCustomPattern = midiNotes.map(n => n !== null);
+      return {
+        ...state,
+        instruments: {
+          ...state.instruments,
+          [instrumentId]: { ...current, midiNotes, customPattern: newCustomPattern },
         },
       };
     }
@@ -281,6 +328,8 @@ export function useGameState() {
           if (instData.count > 0) {
             instData.unlockedPhrases = instData.unlockedPhrases.map(() => true);
           }
+          // Migration: ensure midiNotes field exists
+          if (instData.midiNotes === undefined) instData.midiNotes = null;
           merged.instruments[inst.id] = instData;
         });
         return merged;
@@ -333,6 +382,9 @@ export function useGameState() {
   const setVolume = useCallback((v) => dispatch({ type: 'SET_VOLUME', volume: v }), []);
   const toggleBeat = useCallback((instrumentId, cellIndex, earnNotes = false) =>
     dispatch({ type: 'TOGGLE_BEAT', instrumentId, cellIndex, earnNotes }), []);
+  const setMidiPattern = useCallback((instrumentId, midiNotes) =>
+    dispatch({ type: 'SET_MIDI_PATTERN', instrumentId, midiNotes }), []);
+  const midiEdit = useCallback(() => dispatch({ type: 'MIDI_EDIT' }), []);
   const reset = useCallback(() => {
     localStorage.removeItem(SAVE_KEY);
     dispatch({ type: 'RESET' });
@@ -353,6 +405,8 @@ export function useGameState() {
     setTempo,
     setVolume,
     toggleBeat,
+    setMidiPattern,
+    midiEdit,
     reset,
   };
 }

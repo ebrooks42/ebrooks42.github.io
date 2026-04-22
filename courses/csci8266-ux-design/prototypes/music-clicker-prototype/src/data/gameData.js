@@ -430,6 +430,14 @@ export const UPGRADES = [
     effect: { type: 'nps_multiplier', value: 3 },
   },
   {
+    id: 'advanced_phrase_editor',
+    name: 'Advanced Phrase Editor',
+    description: 'Unlock per-note pitch editing for melodic instruments. +100 notes per edit.',
+    cost: 5000,
+    icon: '🪄',
+    effect: { type: 'unlock_midi_editor' },
+  },
+  {
     id: 'world_tour',
     name: 'World Tour',
     description: '5× all notes per second',
@@ -444,12 +452,22 @@ export const UPGRADES = [
 // ---------------------------------------------------------------------------
 
 // One note per cell (8 cells) for each melodic instrument
-const STEP_NOTES = {
+export const STEP_NOTES = {
   piano:    ['C4','E4','G4','A4','C5','A4','G4','E4'],
   guitar:   ['G3','A3','C4','D4','E4','D4','C4','A3'],
   triangle: ['C5','E5','G5','C5','G5','E5','C5','G5'],
   kazoo:    ['C4','D4','E4','G4','A4','G4','E4','D4'],
   bass:     ['C2','G2','A2','G2','C2','G2','A2','G2'],
+};
+
+// Available pitches for the MIDI editor, ordered high → low.
+// Sticks to natural notes (C D E F G A B) that exist in NOTE_FREQUENCIES.
+export const MIDI_PITCHES = {
+  piano:    ['C5','B4','A4','G4','F4','E4','D4','C4','B3','A3','G3','F3','E3','D3','C3'],
+  guitar:   ['E4','D4','C4','B3','A3','G3','F3','E3','D3','C3','B2','A2','G2'],
+  triangle: ['A5','G5','F5','E5','D5','C5','B4','A4','G4','F4','E4','D4','C4'],
+  kazoo:    ['C5','B4','A4','G4','F4','E4','D4','C4','B3','A3','G3','F3','E3','D3','C3'],
+  bass:     ['E3','D3','C3','B2','A2','G2','F2','E2','D2','C2'],
 };
 
 // Drum type per step cell
@@ -482,7 +500,7 @@ export function getDefaultPattern(phrase, numCells = 8) {
 // Derive one representative note per step cell from a phrase.
 // Uses the same time-bucketing as getDefaultPattern so the notes
 // align with the visual dots shown in the beat grid.
-function getPhraseStepNotes(phrase, numCells = 8) {
+export function getPhraseStepNotes(phrase, numCells = 8) {
   if (!phrase || phrase.isDrum) return null;
   const totalBeats = phrase.totalBeats || 4;
   // Start with the fallback scale so every cell always has a note
@@ -501,7 +519,9 @@ function getPhraseStepNotes(phrase, numCells = 8) {
 
 // Build an audio-engine-compatible phraseData from an 8-cell boolean pattern.
 // Pass the currently active phrase so the step notes match what was selected.
-export function buildPhraseFromPattern(instrumentId, pattern, activePhrase) {
+// Pass midiNotes (Array<string|null>) to use exact per-cell pitches from the
+// MIDI editor instead of deriving them from the phrase.
+export function buildPhraseFromPattern(instrumentId, pattern, activePhrase, midiNotes) {
   const CELL_BEATS = 0.5;
   const totalBeats = pattern.length * CELL_BEATS;
 
@@ -513,7 +533,15 @@ export function buildPhraseFromPattern(instrumentId, pattern, activePhrase) {
     return { isDrum: true, hits, totalBeats };
   }
 
-  // Prefer notes extracted from the active phrase; fall back to the generic scale
+  // MIDI editor notes take priority; fall back to phrase-derived or generic scale
+  if (midiNotes) {
+    const notes = midiNotes.map(noteStr => ({
+      note: noteStr ?? 'REST',
+      duration: CELL_BEATS,
+    }));
+    return { notes, totalBeats };
+  }
+
   const phraseStepNotes = activePhrase ? getPhraseStepNotes(activePhrase, pattern.length) : null;
   const fallbackScale = STEP_NOTES[instrumentId] || new Array(pattern.length).fill('C4');
   const notes = pattern.map((active, i) => ({
