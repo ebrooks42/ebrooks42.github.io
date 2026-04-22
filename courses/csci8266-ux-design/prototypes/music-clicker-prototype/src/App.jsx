@@ -16,7 +16,9 @@ import ShopPane from './components/RightPane.jsx';
 function useAudioSync(state, audioInitialized) {
   const prevStateRef = useRef(null);
   const [pendingPhraseChange, setPendingPhraseChange] = useState({});
-  const pendingTimersRef = useRef({}); // instrumentId → timeoutId
+  const [pendingActivation, setPendingActivation] = useState({});
+  const pendingTimersRef = useRef({});           // instrumentId → phrase-change timeoutId
+  const pendingActivationTimersRef = useRef({}); // instrumentId → activation timeoutId
 
   // Helper: cancel a pending-phrase timer and clear the pending flag
   const clearPending = useCallback((id) => {
@@ -25,7 +27,21 @@ function useAudioSync(state, audioInitialized) {
       delete pendingTimersRef.current[id];
     }
     setPendingPhraseChange(prev => {
-      if (!prev[id]) return prev; // no change needed
+      if (!prev[id]) return prev;
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+  }, []);
+
+  // Helper: cancel a pending-activation timer and clear its flag
+  const clearPendingActivation = useCallback((id) => {
+    if (pendingActivationTimersRef.current[id]) {
+      clearTimeout(pendingActivationTimersRef.current[id]);
+      delete pendingActivationTimersRef.current[id];
+    }
+    setPendingActivation(prev => {
+      if (!prev[id]) return prev;
       const next = { ...prev };
       delete next[id];
       return next;
@@ -38,7 +54,12 @@ function useAudioSync(state, audioInitialized) {
     const prev = prevStateRef.current;
     prevStateRef.current = state;
 
-    audioEngine.setTempo(state.tempo);
+    // Only push tempo to engine when it actually changes in React state.
+    // Unconditional setTempo calls would overwrite the engine's pendingBpm
+    // that was registered by handleTempoChange for the upcoming loop boundary.
+    if (!prev || state.tempo !== prev.tempo) {
+      audioEngine.setTempo(state.tempo);
+    }
     audioEngine.setVolume(state.volume / 100);
 
     INSTRUMENTS.forEach(inst => {
@@ -70,12 +91,22 @@ function useAudioSync(state, audioInitialized) {
 
       if (!shouldPlay && wasShouldPlay) {
         audioEngine.stopInstrument(inst.id);
-        clearPending(inst.id); // instrument turned off — no need to show clock
+        clearPending(inst.id);
+        clearPendingActivation(inst.id);
       } else if (shouldPlay && !wasShouldPlay) {
         // Instrument just turned on — align to next loop boundary so it
         // doesn't start mid-phrase and fall out of sync with other instruments
         const syncTime = audioEngine.getNextLoopBoundary() ?? undefined;
         audioEngine.startInstrument(inst.id, phraseData, inst.audioType || inst.id, syncTime);
+
+        // Dim the row until the instrument actually starts playing
+        if (syncTime !== undefined && audioEngine.ctx) {
+          const delayMs = Math.max(0, (syncTime - audioEngine.ctx.currentTime) * 1000) + 100;
+          setPendingActivation(prev => ({ ...prev, [inst.id]: true }));
+          pendingActivationTimersRef.current[inst.id] = setTimeout(() => {
+            clearPendingActivation(inst.id);
+          }, delayMs);
+        }
       } else if (shouldPlay && phraseChanged) {
         // Phrase selection changed — wait for the next loop boundary so all
         // instruments stay in sync, and show a clock badge until it fires.
@@ -102,10 +133,11 @@ function useAudioSync(state, audioInitialized) {
   useEffect(() => {
     return () => {
       Object.values(pendingTimersRef.current).forEach(clearTimeout);
+      Object.values(pendingActivationTimersRef.current).forEach(clearTimeout);
     };
   }, []);
 
-  return pendingPhraseChange;
+  return { pendingPhraseChange, pendingActivation };
 }
 
 // ---------------------------------------------------------------------------
@@ -114,17 +146,23 @@ function useAudioSync(state, audioInitialized) {
 // ---------------------------------------------------------------------------
 // Driver.js tutorial step definitions
 // ---------------------------------------------------------------------------
+// Steps 0-2 auto-advance based on game state.
+// Step 3 is the final step — it points at the treble-clef button and closes
+// automatically the moment the user clicks it (tutorial completes on that action).
+// Clicking the button on any step skips the entire tutorial.
 const TUTORIAL_STEP_CONFIGS = [
   {
+    // Step 0 — auto-advances when first instrument is purchased
     element: '[data-tutorial-shop-instrument="piano"]',
     popover: {
       title: '',
-      description: 'Welcome to Music Clicker!\nTo get started, purchase your first instrument.',
+      description: 'Welcome to Music Chef!\nLet\'s get cooking!\n\nPurchase your first instrument to start composing.',
       side: 'left',
       align: 'center',
     },
   },
   {
+    // Step 1 — auto-advances when instrument is toggled on
     element: '[data-tutorial-toggle="piano"]',
     popover: {
       title: '',
@@ -134,20 +172,35 @@ const TUTORIAL_STEP_CONFIGS = [
     },
   },
   {
+    // Step 2 — auto-advances when a beat cell is tapped
     element: '[data-tutorial-beatgrid="piano"]',
     popover: {
       title: '',
-      description: 'Tap here to edit the musical phrase.\nHere you can customize tempo and/or beat.',
+      description: 'Tap the beat cells to turn individual notes on or off\nand customize the rhythm.',
       side: 'bottom',
       align: 'center',
     },
   },
   {
-    element: 'body',
+    // Step 3 — points at the notes counter; explains accumulation + free phrase switching.
+    // User clicks "Next →" to continue to the final step.
+    element: '[data-tutorial-notes]',
     popover: {
       title: '',
-      description: 'As you compose, you get notes. Spend them in the shop on more instruments.\nEnjoy playing!',
-      side: 'over',
+      description: 'Your notes accumulate here as your composition plays — spend them on more instruments and upgrades!\n\nYou can also switch musical phrases for free: open any instrument\'s upgrade section in the shop to try different melodies.',
+      nextBtnText: 'Next →',
+      side: 'left',
+      align: 'center',
+    },
+  },
+  {
+    // Step 4 — final step, highlights the treble-clef button.
+    // Closes automatically when the user clicks the clef (handled in onMidiEditorOpen).
+    element: '[data-tutorial-wand="piano"]',
+    popover: {
+      title: '',
+      description: 'For even more control, click the treble clef button to open the Note Editor and assign specific pitches to each beat step.',
+      side: 'left',
       align: 'center',
     },
   },
@@ -174,7 +227,9 @@ export default function App() {
   const [exportState, setExportState] = useState(null); // null | { progress: 0–1 }
   const [showCongrats, setShowCongrats] = useState(false);
   const [activeBeat, setActiveBeat] = useState({}); // instrumentId → current cell (0-7)
+  const [pendingTempo, setPendingTempo] = useState(null); // BPM queued for next loop boundary
   const activeBeatRef = useRef({});
+  const pendingTempoTimerRef = useRef(null);
   const tutorialStepRef = useRef(
     localStorage.getItem('music_clicker_tutorial_done') ? -1 : 0
   );
@@ -245,10 +300,16 @@ export default function App() {
       stageRadius: 8,
       steps: TUTORIAL_STEP_CONFIGS,
       onNextClick: () => {
-        // Button is always Skip (early steps) or Done (last step) — always dismiss
-        localStorage.setItem('music_clicker_tutorial_done', '1');
-        d.destroy();
-        tutorialStepRef.current = -1;
+        if (tutorialStepRef.current === 3) {
+          // Notes/phrases step → advance to the treble-clef step
+          tutorialStepRef.current = 4;
+          d.moveTo(4);
+        } else {
+          // All other steps: skip or dismiss
+          localStorage.setItem('music_clicker_tutorial_done', '1');
+          d.destroy();
+          tutorialStepRef.current = -1;
+        }
       },
       onDestroyStarted: () => {
         localStorage.setItem('music_clicker_tutorial_done', '1');
@@ -333,14 +394,12 @@ export default function App() {
     const earnNotes = now - lastBeatRewardRef.current >= 3000;
     if (earnNotes) lastBeatRewardRef.current = now;
     toggleBeat(instrumentId, cellIndex, earnNotes);
-    // Advance tutorial from step 3 on first beat edit
+    // Auto-advance tutorial from beat-grid step → notes/phrases step
     if (tutorialStepRef.current === 2) {
       tutorialStepRef.current = 3;
       setTimeout(() => {
         if (driverRef.current && tutorialStepRef.current === 3) {
           driverRef.current.moveTo(3);
-          const btn = document.querySelector('.driver-popover-next-btn');
-          if (btn) btn.textContent = 'DONE';
         }
       }, 100);
     }
@@ -352,18 +411,51 @@ export default function App() {
       setTimeout(() => {
         if (driverRef.current && tutorialStepRef.current === 3) {
           driverRef.current.moveTo(3);
-          // Change button text for final step
           const btn = document.querySelector('.driver-popover-next-btn');
-          if (btn) btn.textContent = 'DONE';
+          if (btn) btn.textContent = 'Next →';
         }
       }, 100);
     }
   }, []);
 
   const handleTempoChange = useCallback((t) => {
-    setTempo(t);
-    audioEngine.setTempo(t);
-  }, [setTempo]);
+    // Cancel any existing pending tempo change first
+    if (pendingTempoTimerRef.current) {
+      clearTimeout(pendingTempoTimerRef.current);
+      pendingTempoTimerRef.current = null;
+    }
+
+    // If cancelling a pending change by re-clicking the current tempo, just clear
+    if (t === state.tempo) {
+      setPendingTempo(null);
+      return;
+    }
+
+    // If audio isn't running yet or no instruments are playing, apply immediately
+    const syncTime = audioInitialized ? audioEngine.getNextLoopBoundary() : null;
+    if (syncTime === null || !audioEngine.ctx) {
+      setTempo(t);
+      audioEngine.setTempo(t);
+      setPendingTempo(null);
+      return;
+    }
+
+    // Tell the audio engine to switch BPM exactly at the loop boundary.
+    // The scheduler uses _beatDurationAt() per note/loop so every instrument
+    // (including drums) transitions on the same downbeat.
+    audioEngine.scheduleTempoChange(t, syncTime);
+
+    // React timer: fires slightly after the boundary to update UI state
+    // (clear the clock icon, commit state.tempo).
+    setPendingTempo(t);
+    const delayMs = Math.max(0, (syncTime - audioEngine.ctx.currentTime) * 1000) + 100;
+    pendingTempoTimerRef.current = setTimeout(() => {
+      setTempo(t);
+      audioEngine.setTempo(t); // also clears engine's pendingBpm
+      setPendingTempo(null);
+      pendingTempoTimerRef.current = null;
+    }, delayMs);
+  }, [audioInitialized, state.tempo, setTempo]);
 
   const handleVolumeChange = useCallback((v) => {
     setVolume(v);
@@ -429,10 +521,13 @@ export default function App() {
     return () => cancelAnimationFrame(rafId);
   }, []);
 
-  const pendingPhraseChange = useAudioSync(state, audioInitialized);
+  const { pendingPhraseChange, pendingActivation } = useAudioSync(state, audioInitialized);
 
   useEffect(() => {
-    return () => audioEngine.destroy();
+    return () => {
+      audioEngine.destroy();
+      if (pendingTempoTimerRef.current) clearTimeout(pendingTempoTimerRef.current);
+    };
   }, []);
 
   return (
@@ -503,8 +598,18 @@ export default function App() {
           state={state}
           stats={stats}
           activeBeat={activeBeat}
+          pendingTempo={pendingTempo}
+          pendingActivation={pendingActivation}
           onToggle={handleToggle}
           onBeatToggle={handleBeatToggle}
+          onMidiEditorOpen={() => {
+            // Clicking the treble-clef completes the tutorial if it's still showing
+            if (tutorialStepRef.current !== -1 && driverRef.current) {
+              localStorage.setItem('music_clicker_tutorial_done', '1');
+              driverRef.current.destroy();
+              tutorialStepRef.current = -1;
+            }
+          }}
           onSetMidiPattern={(instrumentId, notes) => {
             // Earn 100× NPC per MIDI edit, debounced to once per 3 s
             const now = Date.now();
@@ -514,7 +619,6 @@ export default function App() {
             }
             setMidiPattern(instrumentId, notes);
           }}
-          midiUnlocked={state.purchasedUpgrades.includes('advanced_phrase_editor')}
           onTempoChange={handleTempoChange}
           onVolumeChange={handleVolumeChange}
           onExport={handleExport}

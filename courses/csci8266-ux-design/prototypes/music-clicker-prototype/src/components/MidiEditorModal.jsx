@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { MIDI_PITCHES, getPhraseStepNotes, STEP_NOTES, getDefaultPattern } from '../data/gameData.js';
+import InstrumentIcon from './InstrumentIcon.jsx';
 
 const NUM_CELLS = 8;
 
@@ -80,9 +81,9 @@ export default function MidiEditorModal({ instrument, instState, onClose, onSetM
           <div className="flex items-center gap-2">
             <span
               className="flex items-center justify-center rounded"
-              style={{ width: 32, height: 32, background: instrument.color, fontSize: 17 }}
+              style={{ width: 32, height: 32, background: instrument.color }}
             >
-              {instrument.emoji}
+              <InstrumentIcon instrumentId={instrument.id} size={18} color="#fff" />
             </span>
             <span className="font-bold text-white" style={{ fontSize: 15 }}>
               {instrument.name} — Note Editor
