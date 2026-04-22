@@ -12,7 +12,7 @@ const SCHEDULER_INTERVAL = 50; // ms between scheduler runs
 // How far ahead of the actual beat the visual cursor starts its transition.
 // 1/5 means the highlight begins at 80% through the previous cell so it
 // arrives fully blue exactly on the downbeat. Tweak here to taste.
-export const VISUAL_LEAD_FRACTION = 1 / 20;
+export const VISUAL_LEAD_FRACTION = 1 / 100;
 
 class AudioEngine {
   constructor() {
