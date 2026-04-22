@@ -22,6 +22,11 @@ class AudioEngine {
     this.volume = 0.7;
     this.initialized = false;
 
+    // Pending scheduled tempo change: applied note-by-note so every instrument
+    // switches on the exact loop boundary rather than mid-loop.
+    this.pendingBpm = null;
+    this.pendingBpmAt = null; // AudioContext time when the new BPM takes effect
+
     // Map of instrumentId -> scheduler state
     // { phraseData, type, nextNoteTime, noteIndex, schedulerTimer }
     this.activeInstruments = new Map();
@@ -47,6 +52,29 @@ class AudioEngine {
 
   setTempo(bpm) {
     this.bpm = Math.max(60, Math.min(200, bpm));
+    // Clear any pending change that now matches the committed tempo
+    if (this.pendingBpm !== null && this.pendingBpm === this.bpm) {
+      this.pendingBpm = null;
+      this.pendingBpmAt = null;
+    }
+  }
+
+  // Queue a tempo change to take effect at a specific AudioContext time.
+  // The scheduler uses _beatDurationAt() per note/loop so each event gets
+  // the right beat duration without a hard cut on already-queued audio.
+  scheduleTempoChange(newBpm, atTime) {
+    this.pendingBpm = Math.max(60, Math.min(200, newBpm));
+    this.pendingBpmAt = atTime;
+  }
+
+  // Returns the beat duration (seconds/beat) that applies to audio scheduled
+  // at `noteTime`. Notes before the pending boundary use current BPM; notes
+  // at or after it use the incoming BPM.
+  _beatDurationAt(noteTime) {
+    if (this.pendingBpm !== null && this.pendingBpmAt !== null && noteTime >= this.pendingBpmAt) {
+      return 60 / this.pendingBpm;
+    }
+    return 60 / this.bpm;
   }
 
   setVolume(vol) {
@@ -150,8 +178,18 @@ class AudioEngine {
 
   _runScheduler() {
     if (!this.initialized || !this.ctx) return;
-    const deadline = this.ctx.currentTime + LOOKAHEAD;
 
+    // Commit a pending BPM change once its scheduled time has passed.
+    // (The React timer also calls setTempo for UI-state purposes, but having
+    // the engine self-commit here guarantees the scheduler never uses stale BPM.)
+    if (this.pendingBpm !== null && this.pendingBpmAt !== null &&
+        this.ctx.currentTime >= this.pendingBpmAt) {
+      this.bpm = this.pendingBpm;
+      this.pendingBpm = null;
+      this.pendingBpmAt = null;
+    }
+
+    const deadline = this.ctx.currentTime + LOOKAHEAD;
     for (const [id, state] of this.activeInstruments) {
       this._scheduleInstrument(id, state, deadline);
     }
@@ -161,19 +199,19 @@ class AudioEngine {
     const { phraseData, type } = state;
     if (!phraseData) return;
 
-    const beatDur = this._beatDuration();
-
     if (phraseData.isDrum) {
-      // Drum scheduling: we treat the phrase as a fixed set of hits per loop
-      // We store loopStartTime and schedule entire loops
-      if (state.nextNoteTime === undefined || state.nextNoteTime <= this.ctx.currentTime - phraseData.totalBeats * beatDur - 0.5) {
+      // Drum scheduling: schedule entire loops at once.
+      // Beat duration is determined by the loop's START time so the whole loop
+      // is internally consistent even when a BPM change falls on the boundary.
+      const staleCutoff = this.ctx.currentTime - phraseData.totalBeats * this._beatDuration() - 0.5;
+      if (state.nextNoteTime === undefined || state.nextNoteTime <= staleCutoff) {
         state.nextNoteTime = this.ctx.currentTime;
         state.loopIndex = 0;
       }
       while (state.nextNoteTime < deadline) {
         const loopStart = state.nextNoteTime;
-        state.currentLoopStart = loopStart; // record for UI cursor
-        // Schedule all hits in this loop
+        const beatDur = this._beatDurationAt(loopStart); // BPM correct for this loop's start time
+        state.currentLoopStart = loopStart;
         for (const hit of phraseData.hits) {
           const hitTime = loopStart + hit.time * beatDur;
           if (hitTime >= this.ctx.currentTime - 0.01) {
@@ -183,13 +221,16 @@ class AudioEngine {
         state.nextNoteTime += phraseData.totalBeats * beatDur;
       }
     } else {
-      // Melodic scheduling: note by note
+      // Melodic scheduling: note by note.
+      // Each note gets the BPM appropriate for its own scheduled time, so the
+      // transition to a new tempo is seamless note-by-note at the boundary.
       const notes = phraseData.notes;
       if (!notes || notes.length === 0) return;
 
       while (state.nextNoteTime < deadline) {
+        const beatDur = this._beatDurationAt(state.nextNoteTime); // BPM for this specific note
         if (state.noteIndex === 0) {
-          state.currentLoopStart = state.nextNoteTime; // new loop starting here
+          state.currentLoopStart = state.nextNoteTime;
         }
         const note = notes[state.noteIndex % notes.length];
         const freq = NOTE_FREQUENCIES[note.note] || 0;
@@ -291,7 +332,7 @@ class AudioEngine {
     filter.frequency.setValueAtTime(200, time);
     filter.Q.setValueAtTime(2, time);
 
-    const env = this._makeGain(time, 0.5, 0.01, 0.15, 0.7, 0.05, duration);
+    const env = this._makeGain(time, 0.6, 0.01, 0.15, 0.7, 0.05, duration);
 
     osc.connect(filter);
     filter.connect(env);
@@ -354,9 +395,9 @@ class AudioEngine {
     // regardless of the note's nominal duration.
     const ringTime = Math.max(duration + 0.3, 1.8);
     const partials = [
-      { ratio: 1,    gain: 0.45 },
-      { ratio: 2.76, gain: 0.18 },
-      { ratio: 5.40, gain: 0.07 },
+      { ratio: 1,    gain: 0.22 },
+      { ratio: 2.76, gain: 0.09 },
+      { ratio: 5.40, gain: 0.035 },
     ];
 
     partials.forEach(({ ratio, gain: peak }) => {

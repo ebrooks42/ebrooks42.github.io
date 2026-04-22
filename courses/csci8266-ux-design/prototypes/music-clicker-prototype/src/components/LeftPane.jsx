@@ -1,12 +1,14 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import { INSTRUMENTS, getDefaultPattern } from '../data/gameData.js';
 import { VISUAL_LEAD_FRACTION } from '../audio/audioEngine.js';
 import MidiEditorModal from './MidiEditorModal.jsx';
+import InstrumentIcon from './InstrumentIcon.jsx';
+import { GiGClef } from 'react-icons/gi';
 
 // ---------------------------------------------------------------------------
 // Single instrument row
 // ---------------------------------------------------------------------------
-function InstrumentRow({ instrument, instState, onToggle, onBeatToggle, onOpenMidiEditor, midiUnlocked, activeCellIndex, beatTransitionMs }) {
+function InstrumentRow({ instrument, instState, onToggle, onBeatToggle, onOpenMidiEditor, activeCellIndex, beatTransitionMs, isPendingActivation }) {
   const count = instState?.count || 0;
   const active = instState?.active || false;
   const phraseIndex = instState?.activePhrase || 0;
@@ -22,7 +24,7 @@ function InstrumentRow({ instrument, instState, onToggle, onBeatToggle, onOpenMi
     <div
       className="flex items-stretch border-b border-black/25 select-none"
       data-instrument-row={instrument.id}
-      style={{ minHeight: 52 }}
+      style={{ minHeight: 52, opacity: isPendingActivation ? 0.65 : 1, transition: isPendingActivation ? 'none' : 'opacity 0.25s ease' }}
     >
       {/* Instrument control column */}
       <div
@@ -31,11 +33,9 @@ function InstrumentRow({ instrument, instState, onToggle, onBeatToggle, onOpenMi
       >
         {/* Colored icon box — tappable to toggle when owned */}
         <div
-          className="w-9 h-9 rounded flex items-center justify-center text-base flex-shrink-0 font-bold"
+          className="w-9 h-9 rounded flex items-center justify-center flex-shrink-0"
           style={{
             background: count > 0 ? instrument.color : '#3a3a3a',
-            color: count > 0 ? '#fff' : '#555',
-            fontSize: instrument.emoji.length > 1 ? 18 : 20,
             cursor: count > 0 ? 'pointer' : 'default',
           }}
           onClick={(e) => {
@@ -45,7 +45,11 @@ function InstrumentRow({ instrument, instState, onToggle, onBeatToggle, onOpenMi
             }
           }}
         >
-          {instrument.emoji}
+          <InstrumentIcon
+            instrumentId={instrument.id}
+            size={20}
+            color={count > 0 ? '#fff' : '#555'}
+          />
         </div>
 
         {/* Toggle pill */}
@@ -63,7 +67,7 @@ function InstrumentRow({ instrument, instState, onToggle, onBeatToggle, onOpenMi
             }}
           >
             <div className="w-3 h-3 rounded-full bg-white/90 flex-shrink-0" />
-            <span>{active ? 'ON' : 'OFF'}</span>
+            <span>{active ? (isPendingActivation ? '⏱️' : 'ON') : 'OFF'}</span>
           </button>
         ) : (
           <div
@@ -122,9 +126,9 @@ function InstrumentRow({ instrument, instState, onToggle, onBeatToggle, onOpenMi
             ))}
           </div>
 
-          {/* Right-edge wand/spacer — always rendered to keep rows aligned */}
+          {/* Right-edge clef button / spacer — always rendered to keep rows aligned */}
           {phrase?.isDrum ? (
-            // Drums: invisible spacer so beat grid width matches melodic rows
+            // Drums: invisible spacer matching the clef button width
             <div
               className="flex-shrink-0"
               style={{
@@ -134,14 +138,14 @@ function InstrumentRow({ instrument, instState, onToggle, onBeatToggle, onOpenMi
                 background: 'rgba(0,0,0,0.12)',
               }}
             />
-          ) : midiUnlocked ? (
-            // Melodic + upgrade owned: active wand button
+          ) : (
+            // Melodic: always-active note editor button
             <button
+              data-tutorial-wand={instrument.id}
               className="flex-shrink-0 flex items-center justify-center"
               style={{
                 width: 36,
                 height: '100%',
-                fontSize: 16,
                 background: 'rgba(0,0,0,0.12)',
                 borderLeft: '1px solid rgba(0,0,0,0.15)',
                 cursor: 'pointer',
@@ -153,26 +157,8 @@ function InstrumentRow({ instrument, instState, onToggle, onBeatToggle, onOpenMi
                 onOpenMidiEditor(instrument.id);
               }}
             >
-              🪄
+              <GiGClef size={18} />
             </button>
-          ) : (
-            // Melodic + upgrade NOT owned: grayed wand with tooltip
-            <div
-              className="flex-shrink-0 flex items-center justify-center"
-              style={{
-                width: 36,
-                height: '100%',
-                fontSize: 16,
-                background: 'rgba(0,0,0,0.12)',
-                borderLeft: '1px solid rgba(0,0,0,0.15)',
-                cursor: 'not-allowed',
-                color: 'rgba(0,0,0,0.22)',
-                filter: 'grayscale(1)',
-              }}
-              title="Requires the 'Advanced Phrase Editor' upgrade to unlock"
-            >
-              🪄
-            </div>
           )}
         </div>
       ) : (
@@ -188,8 +174,13 @@ function InstrumentRow({ instrument, instState, onToggle, onBeatToggle, onOpenMi
 // ---------------------------------------------------------------------------
 // TimelinePane
 // ---------------------------------------------------------------------------
-export default function TimelinePane({ state, stats, activeBeat, onToggle, onBeatToggle, onSetMidiPattern, midiUnlocked, onTempoChange, onVolumeChange, onExport, exportProgress, onReset }) {
+export default function TimelinePane({ state, stats, activeBeat, pendingTempo, pendingActivation, onToggle, onBeatToggle, onSetMidiPattern, onMidiEditorOpen, onTempoChange, onVolumeChange, onExport, exportProgress, onReset }) {
   const [midiEditId, setMidiEditId] = useState(null);
+
+  const handleOpenMidiEditor = useCallback((id) => {
+    onMidiEditorOpen?.();
+    setMidiEditId(id);
+  }, [onMidiEditorOpen]);
   // Cell duration at current BPM: each phrase is 4 beats, split into 8 cells
   const cellDurSec = (4 / 8) * (60 / state.tempo);
   const beatTransitionMs = Math.round(VISUAL_LEAD_FRACTION * cellDurSec * 1000);
@@ -216,42 +207,74 @@ export default function TimelinePane({ state, stats, activeBeat, onToggle, onBea
         className="flex-shrink-0 flex items-center justify-center"
         style={{ height: 72, borderBottom: '2px solid #1a1a1a' }}
       >
-        <h1
-          className="font-light tracking-wide"
-          style={{ fontSize: 36, color: '#9ca3af', letterSpacing: '0.05em' }}
-        >
-          Timeline
-        </h1>
+        <div className="flex flex-col items-center" style={{ lineHeight: 1.15 }}>
+          <h1
+            className="font-light tracking-wide"
+            style={{ fontSize: 32, color: '#9ca3af', letterSpacing: '0.05em' }}
+          >
+            Music Chef
+          </h1>
+          <span
+            className="font-light italic"
+            style={{ fontSize: 13, color: '#6b7280', letterSpacing: '0.03em' }}
+          >
+            Let's get cooking!
+          </span>
+        </div>
       </div>
 
       {/* Composition space: sliders + instrument icon cloud */}
       <div className="flex-1 min-h-0 flex flex-col" style={{ background: '#1e1e1e' }}>
         {/* Tempo / volume controls */}
-        <div className="flex-shrink-0 px-6 pt-4 pb-2 space-y-2 opacity-60">
-          <div className="flex items-center gap-3">
-            <span className="text-gray-400 text-xs w-10">BPM</span>
-            <input
-              type="range"
-              min={60}
-              max={200}
-              value={state.tempo}
-              onChange={e => onTempoChange(Number(e.target.value))}
-              className="flex-1 h-1.5 rounded-full cursor-pointer"
-            />
-            <span className="text-gray-400 text-xs w-8 text-right font-mono">{state.tempo}</span>
+        <div className="flex-shrink-0 px-4 pt-4 pb-3 space-y-3" style={{ opacity: 0.75 }}>
+
+          {/* BPM — preset buttons */}
+          <div className="flex items-center gap-2">
+            <span className="text-gray-400 text-xs flex-shrink-0" style={{ width: 28 }}>BPM</span>
+            <div className="flex-1 flex gap-1.5">
+              {[70, 90, 120, 150].map(bpm => {
+                const isActive = state.tempo === bpm && !pendingTempo;
+                const isPending = pendingTempo === bpm;
+                const isDimmed = !!pendingTempo && state.tempo === bpm;
+                return (
+                  <button
+                    key={bpm}
+                    className="flex-1 rounded font-bold text-xs transition-colors flex items-center justify-center gap-0.5"
+                    style={{
+                      paddingTop: 10,
+                      paddingBottom: 10,
+                      background: isPending ? 'rgba(251,191,36,0.18)' : isActive ? '#9ca3af' : isDimmed ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.08)',
+                      color: isPending ? '#fbbf24' : isActive ? '#1a1a1a' : '#6b7280',
+                      border: isPending ? '1px solid rgba(251,191,36,0.45)' : isActive ? 'none' : '1px solid rgba(255,255,255,0.08)',
+                      opacity: isDimmed ? 0.5 : 1,
+                    }}
+                    onClick={() => onTempoChange(bpm)}
+                  >
+                    <span>{bpm}</span>
+                    {isPending && <span style={{ fontSize: 10 }}>⏱️</span>}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-gray-400 text-xs w-10">Vol</span>
+
+          {/* Volume — tall slider for easy touch */}
+          <div className="flex items-center gap-2">
+            <span className="text-gray-400 text-xs flex-shrink-0" style={{ width: 28 }}>Vol</span>
             <input
               type="range"
               min={0}
               max={100}
               value={state.volume}
               onChange={e => onVolumeChange(Number(e.target.value))}
-              className="flex-1 h-1.5 rounded-full cursor-pointer"
+              className="flex-1 cursor-pointer"
+              style={{ height: 36 }}
             />
-            <span className="text-gray-400 text-xs w-8 text-right font-mono">{state.volume}%</span>
+            <span className="text-gray-400 text-xs text-right font-mono flex-shrink-0" style={{ width: 32 }}>
+              {state.volume}%
+            </span>
           </div>
+
         </div>
 
         {/* Instrument icon cloud — one icon per owned instrument */}
@@ -263,14 +286,9 @@ export default function TimelinePane({ state, stats, activeBeat, onToggle, onBea
                 <div
                   key={`${inst.id}-${i}`}
                   className="rounded flex items-center justify-center flex-shrink-0"
-                  style={{
-                    width: 28,
-                    height: 28,
-                    background: inst.color,
-                    fontSize: inst.emoji.length > 1 ? 13 : 15,
-                  }}
+                  style={{ width: 28, height: 28, background: inst.color }}
                 >
-                  {inst.emoji}
+                  <InstrumentIcon instrumentId={inst.id} size={16} color="#fff" />
                 </div>
               ));
             })}
@@ -287,10 +305,10 @@ export default function TimelinePane({ state, stats, activeBeat, onToggle, onBea
             instState={state.instruments[inst.id]}
             onToggle={onToggle}
             onBeatToggle={onBeatToggle}
-            onOpenMidiEditor={setMidiEditId}
-            midiUnlocked={midiUnlocked}
+            onOpenMidiEditor={handleOpenMidiEditor}
             activeCellIndex={activeBeat?.[inst.id] ?? -1}
             beatTransitionMs={beatTransitionMs}
+            isPendingActivation={!!pendingActivation?.[inst.id]}
           />
         ))}
       </div>

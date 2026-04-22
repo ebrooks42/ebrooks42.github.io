@@ -115,6 +115,7 @@ export default function ShopPane({
           Shop
         </h1>
         <div
+          data-tutorial-notes
           className="rounded px-2 py-0.5 font-bold text-xl"
           style={{
             background: notes > 0 ? '#BFDBFE' : '#d4d4d4',
