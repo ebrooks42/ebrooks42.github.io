@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
 import { useGameState } from './store/useGameState.js';
@@ -10,9 +10,27 @@ import ShopPane from './components/RightPane.jsx';
 
 // ---------------------------------------------------------------------------
 // Sync audio engine with game state
+// Returns pendingPhraseChange: { [instrumentId]: true } for instruments
+// whose phrase switch is scheduled but hasn't fired yet (shows clock icon).
 // ---------------------------------------------------------------------------
 function useAudioSync(state, audioInitialized) {
   const prevStateRef = useRef(null);
+  const [pendingPhraseChange, setPendingPhraseChange] = useState({});
+  const pendingTimersRef = useRef({}); // instrumentId → timeoutId
+
+  // Helper: cancel a pending-phrase timer and clear the pending flag
+  const clearPending = useCallback((id) => {
+    if (pendingTimersRef.current[id]) {
+      clearTimeout(pendingTimersRef.current[id]);
+      delete pendingTimersRef.current[id];
+    }
+    setPendingPhraseChange(prev => {
+      if (!prev[id]) return prev; // no change needed
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     if (!audioInitialized) return;
@@ -29,42 +47,65 @@ function useAudioSync(state, audioInitialized) {
       const active = instState?.active || false;
       const phraseIndex = instState?.activePhrase || 0;
       const customPattern = instState?.customPattern || null;
+      const midiNotes = instState?.midiNotes || null;
 
       const prevInstState = prev?.instruments?.[inst.id];
       const prevCount = prevInstState?.count || 0;
       const prevActive = prevInstState?.active || false;
       const prevPhrase = prevInstState?.activePhrase || 0;
       const prevCustomPattern = prevInstState?.customPattern || null;
+      const prevMidiNotes = prevInstState?.midiNotes || null;
 
       // Use custom step-sequencer pattern if set, otherwise use the phrase.
-      // Pass the active phrase so edited beats keep the correct notes.
+      // Pass midiNotes for exact per-cell pitch when the MIDI editor has been used.
       const activePhrase = inst.phrases[phraseIndex];
       const phraseData = customPattern
-        ? buildPhraseFromPattern(inst.id, customPattern, activePhrase)
+        ? buildPhraseFromPattern(inst.id, customPattern, activePhrase, midiNotes)
         : activePhrase;
 
       const shouldPlay = count > 0 && active;
       const wasShouldPlay = prevCount > 0 && prevActive;
-      const patternChanged = customPattern !== prevCustomPattern;
+      const patternChanged = customPattern !== prevCustomPattern || midiNotes !== prevMidiNotes;
       const phraseChanged = phraseIndex !== prevPhrase;
 
       if (!shouldPlay && wasShouldPlay) {
         audioEngine.stopInstrument(inst.id);
+        clearPending(inst.id); // instrument turned off — no need to show clock
       } else if (shouldPlay && !wasShouldPlay) {
         // Instrument just turned on — align to next loop boundary so it
         // doesn't start mid-phrase and fall out of sync with other instruments
         const syncTime = audioEngine.getNextLoopBoundary() ?? undefined;
         audioEngine.startInstrument(inst.id, phraseData, inst.audioType || inst.id, syncTime);
       } else if (shouldPlay && phraseChanged) {
-        // Phrase selection changed — restart from the new phrase's beginning
-        audioEngine.startInstrument(inst.id, phraseData, inst.audioType || inst.id);
+        // Phrase selection changed — wait for the next loop boundary so all
+        // instruments stay in sync, and show a clock badge until it fires.
+        clearPending(inst.id); // cancel any existing timer for this instrument
+        const syncTime = audioEngine.getNextLoopBoundary() ?? undefined;
+        audioEngine.startInstrument(inst.id, phraseData, inst.audioType || inst.id, syncTime);
+
+        if (syncTime !== undefined && audioEngine.ctx) {
+          const delayMs = Math.max(0, (syncTime - audioEngine.ctx.currentTime) * 1000) + 100;
+          setPendingPhraseChange(prev => ({ ...prev, [inst.id]: true }));
+          pendingTimersRef.current[inst.id] = setTimeout(() => {
+            clearPending(inst.id);
+          }, delayMs);
+        }
       } else if (shouldPlay && patternChanged) {
         // Beat grid edit — swap phrase data in-place without resetting timing
         // so all instruments stay in sync
         audioEngine.patchInstrumentPhrase(inst.id, phraseData, inst.audioType || inst.id);
       }
     });
-  }, [state, audioInitialized]);
+  }, [state, audioInitialized, clearPending]);
+
+  // Clean up all pending timers on unmount
+  useEffect(() => {
+    return () => {
+      Object.values(pendingTimersRef.current).forEach(clearTimeout);
+    };
+  }, []);
+
+  return pendingPhraseChange;
 }
 
 // ---------------------------------------------------------------------------
@@ -124,6 +165,8 @@ export default function App() {
     setTempo,
     setVolume,
     toggleBeat,
+    setMidiPattern,
+    midiEdit,
     reset,
   } = useGameState();
 
@@ -136,7 +179,8 @@ export default function App() {
     localStorage.getItem('music_clicker_tutorial_done') ? -1 : 0
   );
   const driverRef = useRef(null);
-  const lastBeatRewardRef = useRef(0); // timestamp of last beat-edit note reward
+  const lastBeatRewardRef = useRef(0);  // timestamp of last beat-edit note reward
+  const lastMidiRewardRef = useRef(0);  // timestamp of last MIDI-editor note reward
 
   // Initialize driver.js tutorial on mount
   useEffect(() => {
@@ -385,7 +429,7 @@ export default function App() {
     return () => cancelAnimationFrame(rafId);
   }, []);
 
-  useAudioSync(state, audioInitialized);
+  const pendingPhraseChange = useAudioSync(state, audioInitialized);
 
   useEffect(() => {
     return () => audioEngine.destroy();
@@ -461,6 +505,16 @@ export default function App() {
           activeBeat={activeBeat}
           onToggle={handleToggle}
           onBeatToggle={handleBeatToggle}
+          onSetMidiPattern={(instrumentId, notes) => {
+            // Earn 100× NPC per MIDI edit, debounced to once per 3 s
+            const now = Date.now();
+            if (now - lastMidiRewardRef.current >= 3000) {
+              lastMidiRewardRef.current = now;
+              midiEdit();
+            }
+            setMidiPattern(instrumentId, notes);
+          }}
+          midiUnlocked={state.purchasedUpgrades.includes('advanced_phrase_editor')}
           onTempoChange={handleTempoChange}
           onVolumeChange={handleVolumeChange}
           onExport={handleExport}
@@ -483,6 +537,7 @@ export default function App() {
           onBuyPhrase={buyPhrase}
           onSetPhrase={setActivePhrase}
           onBuyUpgrade={buyUpgrade}
+          pendingPhraseChange={pendingPhraseChange}
           tutorialHighlight={tutorialStepRef.current === 0 ? 'piano' : null}
         />
       </div>
