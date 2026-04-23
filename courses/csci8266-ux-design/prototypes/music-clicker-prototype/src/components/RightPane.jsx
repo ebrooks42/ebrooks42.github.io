@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { INSTRUMENTS, UPGRADES, getInstrumentCost, formatNumber } from '../data/gameData.js';
+import { INSTRUMENTS, UPGRADES, getInstrumentCost, formatNumber, formatNPS } from '../data/gameData.js';
 
 // ---------------------------------------------------------------------------
 // Phrase upgrade section (expandable, shown inside instrument upgrade dropdown)
@@ -87,15 +87,19 @@ export default function ShopPane({
   pendingPhraseChange,
 }) {
   const { notes } = state;
-  const [instrumentsOpen, setInstrumentsOpen] = useState(true);
+  // undefined = default open; false = explicitly closed; true = explicitly opened
   const [upgradeOpen, setUpgradeOpen] = useState({});
 
-  const ownedInstruments = INSTRUMENTS.filter(
-    inst => (state.instruments[inst.id]?.count || 0) > 0
-  );
+  // Effective NPS multiplier from purchased upgrades (used to show real ♪/s values)
+  const npsMultiplier = state.purchasedUpgrades.reduce((mult, uid) => {
+    const upg = UPGRADES.find(u => u.id === uid);
+    if (upg?.effect.type === 'nps_multiplier') return mult * upg.effect.value;
+    return mult;
+  }, 1);
 
   const toggleUpgrade = (id) => {
-    setUpgradeOpen(prev => ({ ...prev, [id]: !prev[id] }));
+    // undefined/true → close (false); false → open (true)
+    setUpgradeOpen(prev => ({ ...prev, [id]: prev[id] !== false ? false : true }));
   };
 
   return (
@@ -131,63 +135,55 @@ export default function ShopPane({
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto min-h-0 py-3 space-y-2 px-3">
 
-        {/* Instruments collapsible section */}
-        <button
-          className="w-full flex items-center justify-between px-4 py-3 rounded-xl font-semibold text-base"
-          style={{ background: '#4a4a4a', color: '#e2e8f0' }}
-          onClick={() => setInstrumentsOpen(o => !o)}
-        >
-          <span>Instruments</span>
-          <span style={{ fontSize: 12 }}>{instrumentsOpen ? '▲' : '▼'}</span>
-        </button>
+        {/* Instruments section header (non-interactive, like Global Upgrades) */}
+        <div className="px-1 py-1 text-xs text-gray-400 uppercase tracking-widest font-semibold">
+          Instruments
+        </div>
 
-        {instrumentsOpen && (
-          <div className="space-y-2 pb-1">
-            {INSTRUMENTS.map(inst => {
-              const instState = state.instruments[inst.id];
-              const count = instState?.count || 0;
-              const cost = getInstrumentCost(inst, count);
-              const canAfford = notes >= cost;
-              const isOwned = count > 0;
-              const isHighlighted = tutorialHighlight === inst.id;
+        {/* One entry per instrument — buy card when unowned, upgrade panel when owned */}
+        {INSTRUMENTS.map(inst => {
+          const instState = state.instruments[inst.id];
+          const count = instState?.count || 0;
+          const isOwned = count > 0;
+          const isHighlighted = tutorialHighlight === inst.id;
 
-              if (isOwned) return null; // owned instruments are shown in Upgrade section
-
-              return (
-                <div
-                  key={inst.id}
-                  data-tutorial-shop-instrument={inst.id}
-                  className="flex items-center justify-between px-4 py-3 rounded-xl cursor-pointer select-none transition-all duration-150"
-                  style={{
-                    background: isHighlighted || canAfford ? '#ffffff' : '#3a3a3a',
-                    color: isHighlighted || canAfford ? '#1a1a1a' : '#9ca3af',
-                    boxShadow: isHighlighted ? '0 0 0 2px #3B82F6' : 'none',
-                  }}
-                  onClick={() => canAfford && onBuyInstrument(inst.id)}
-                >
+          if (!isOwned) {
+            const cost = getInstrumentCost(inst, count);
+            const canAfford = notes >= cost;
+            return (
+              <div
+                key={inst.id}
+                data-tutorial-shop-instrument={inst.id}
+                className="flex items-center justify-between px-4 py-3 rounded-xl cursor-pointer select-none transition-all duration-150"
+                style={{
+                  background: isHighlighted || canAfford ? '#ffffff' : '#3a3a3a',
+                  boxShadow: isHighlighted ? '0 0 0 2px #3B82F6' : 'none',
+                }}
+                onClick={() => canAfford && onBuyInstrument(inst.id)}
+              >
+                <div className="flex flex-col">
                   <span
                     className="font-semibold text-lg"
                     style={{ color: isHighlighted || canAfford ? '#1a1a1a' : '#6b7280' }}
                   >
                     {inst.name}
                   </span>
-                  <span
-                    className="font-semibold text-lg"
-                    style={{ color: isHighlighted || canAfford ? '#1a1a1a' : '#6b7280' }}
-                  >
-                    {formatNumber(cost)}♪
+                  <span className="text-xs" style={{ color: '#6b7280' }}>
+                    {formatNPS(inst.baseNPS * npsMultiplier)} ♪/s per copy
                   </span>
                 </div>
-              );
-            })}
-          </div>
-        )}
+                <span
+                  className="font-semibold text-lg"
+                  style={{ color: isHighlighted || canAfford ? '#1a1a1a' : '#6b7280' }}
+                >
+                  {formatNumber(cost)}♪
+                </span>
+              </div>
+            );
+          }
 
-        {/* Owned instrument upgrade sections */}
-        {ownedInstruments.map(inst => {
-          const isOpen = upgradeOpen[inst.id];
-          const instState = state.instruments[inst.id];
-
+          // Owned: upgrade panel, default open (upgradeOpen[id] !== false)
+          const isOpen = upgradeOpen[inst.id] !== false;
           return (
             <div key={inst.id}>
               <button
@@ -210,9 +206,16 @@ export default function ShopPane({
                       Buy More
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-300 text-sm">
-                        {inst.name} ×{instState.count}
-                      </span>
+                      <div className="flex flex-col">
+                        <span className="text-gray-300 text-sm">
+                          {inst.name} ×{instState.count}
+                        </span>
+                        <span className="text-xs" style={{ color: '#6b7280' }}>
+                          {formatNPS(inst.baseNPS * instState.count * npsMultiplier)} ♪/s total
+                          {' · '}
+                          {formatNPS(inst.baseNPS * npsMultiplier)} ♪/s each
+                        </span>
+                      </div>
                       {(() => {
                         const nextCost = getInstrumentCost(inst, instState.count);
                         const canAfford = notes >= nextCost;
@@ -248,7 +251,7 @@ export default function ShopPane({
           );
         })}
 
-        {/* Upgrades section (global) */}
+        {/* Global Upgrades */}
         {UPGRADES.filter(u => !state.purchasedUpgrades.includes(u.id)).length > 0 && (
           <div>
             <div className="px-1 py-1 text-xs text-gray-400 uppercase tracking-widest font-semibold">
