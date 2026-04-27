@@ -22,7 +22,7 @@ function buildInitialState() {
   });
 
   return {
-    notes: 30,          // starting balance to purchase first instrument
+    notes: 70,          // starting balance to purchase first instrument
     totalNotesEarned: 0,
     instruments,
     purchasedUpgrades: [],
