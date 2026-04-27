@@ -208,53 +208,6 @@ export const PHRASES = {
       totalBeats: 4,
     },
   ],
-  kazoo: [
-    {
-      id: 'kazoo_1',
-      name: 'Hum Along',
-      notes: [
-        { note: 'C4', duration: 0.5 },
-        { note: 'D4', duration: 0.5 },
-        { note: 'E4', duration: 0.5 },
-        { note: 'G4', duration: 0.5 },
-        { note: 'E4', duration: 0.5 },
-        { note: 'D4', duration: 0.5 },
-        { note: 'C4', duration: 0.5 },
-        { note: 'REST', duration: 0.5 },
-      ],
-      totalBeats: 4,
-    },
-    {
-      id: 'kazoo_2',
-      name: 'Buzzy Tune',
-      notes: [
-        { note: 'E4', duration: 0.5 },
-        { note: 'G4', duration: 0.5 },
-        { note: 'A4', duration: 0.5 },
-        { note: 'G4', duration: 0.5 },
-        { note: 'E4', duration: 0.5 },
-        { note: 'C4', duration: 0.5 },
-        { note: 'D4', duration: 0.5 },
-        { note: 'REST', duration: 0.5 },
-      ],
-      totalBeats: 4,
-    },
-    {
-      id: 'kazoo_3',
-      name: 'Fast Buzz',
-      notes: [
-        { note: 'C4', duration: 0.5 },
-        { note: 'E4', duration: 0.5 },
-        { note: 'G4', duration: 0.5 },
-        { note: 'A4', duration: 0.5 },
-        { note: 'C5', duration: 0.5 },
-        { note: 'A4', duration: 0.5 },
-        { note: 'G4', duration: 0.5 },
-        { note: 'E4', duration: 0.5 },
-      ],
-      totalBeats: 4,
-    },
-  ],
   bass: [
     {
       id: 'bass_1',
@@ -350,21 +303,10 @@ export const INSTRUMENTS = [
     phraseCosts: [0, 0, 1000, 4000],
   },
   {
-    id: 'kazoo',
-    name: 'Kazoo',
-    emoji: '〰',
-    baseCost: 500,
-    baseNPS: 40,
-    color: '#84CC16',
-    audioType: 'synth',
-    phrases: PHRASES.kazoo,
-    phraseCosts: [0, 0, 2000, 8000],
-  },
-  {
     id: 'bass',
     name: 'Bass',
     emoji: '🎸',
-    baseCost: 1000,
+    baseCost: 500,
     baseNPS: 100,
     color: '#6366F1',
     audioType: 'bass',
@@ -433,7 +375,6 @@ export const STEP_NOTES = {
   piano:    ['C4','E4','G4','A4','C5','A4','G4','E4'],
   guitar:   ['G3','A3','C4','D4','E4','D4','C4','A3'],
   triangle: ['C5','E5','G5','C5','G5','E5','C5','G5'],
-  kazoo:    ['C4','D4','E4','G4','A4','G4','E4','D4'],
   bass:     ['C2','G2','A2','G2','C2','G2','A2','G2'],
 };
 
@@ -443,7 +384,6 @@ export const MIDI_PITCHES = {
   piano:    ['C5','B4','A4','G4','F4','E4','D4','C4','B3','A3','G3','F3','E3','D3','C3'],
   guitar:   ['E4','D4','C4','B3','A3','G3','F3','E3','D3','C3','B2','A2','G2'],
   triangle: ['A5','G5','F5','E5','D5','C5','B4','A4','G4','F4','E4','D4','C4'],
-  kazoo:    ['C5','B4','A4','G4','F4','E4','D4','C4','B3','A3','G3','F3','E3','D3','C3'],
   bass:     ['E3','D3','C3','B2','A2','G2','F2','E2','D2','C2'],
 };
 
