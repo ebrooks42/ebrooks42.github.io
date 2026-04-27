@@ -1,4 +1,4 @@
-# Music Clicker Prototype
+# Music Chef Prototype
 
 A browser-based idle/clicker game where you compose music to earn notes, purchase instruments, and unlock new phrases. Built with React 18, Vite, and Tailwind CSS.
 

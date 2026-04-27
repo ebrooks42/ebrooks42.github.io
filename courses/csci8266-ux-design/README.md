@@ -21,5 +21,5 @@
 
 - [Group Project: Mavlink Course Search Prototype](./prototypes/mavlink-course-search)
 - [Notes on group pitches from April 1st, 2026](./week12-pitch-feedback.md)
-- [Final project for Dolphin Group: MusicClicker](./prototype-music-clicker/)
+- [Final project for Dolphin Group: Music Chef](./prototype-music-clicker/)
 - [Notes on group testing presentations from April 13th, 2026](./week14-testing-presentation-feedback.md)
