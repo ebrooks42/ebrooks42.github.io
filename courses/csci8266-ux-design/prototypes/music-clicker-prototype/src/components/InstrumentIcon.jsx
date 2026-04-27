@@ -4,7 +4,6 @@ import {
   GiDrumKit,
   GiGuitar,
   GiXylophone,
-  GiFlute,
   GiGuitarBassHead,
 } from 'react-icons/gi';
 
@@ -13,8 +12,8 @@ const ICONS = {
   drums:    GiDrumKit,
   guitar:   GiGuitar,
   triangle: GiXylophone,   // instrument id is still 'triangle', sound is xylophone
-  kazoo:    GiFlute,
   bass:     GiGuitarBassHead,
+  // kazoo removed — unknown ids fall back to null gracefully
 };
 
 /**

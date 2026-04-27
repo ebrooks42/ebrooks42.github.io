@@ -319,6 +319,8 @@ export function useGameState() {
           ...saved,
           instruments: {},
         };
+        // Only iterate current INSTRUMENTS — removed instruments (e.g. kazoo)
+        // may still exist in saved JSON but are intentionally ignored here.
         INSTRUMENTS.forEach(inst => {
           const instData = {
             ...(initial.instruments[inst.id]),
