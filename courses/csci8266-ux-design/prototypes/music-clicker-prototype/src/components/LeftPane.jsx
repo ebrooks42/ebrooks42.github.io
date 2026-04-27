@@ -313,7 +313,7 @@ export default function TimelinePane({ state, stats, activeBeat, pendingTempo, p
         ))}
       </div>
 
-      {/* Footer bar: reset left, export right */}
+      {/* Footer bar: reset, review, export */}
       <div
         className="flex-shrink-0 flex items-center justify-center px-4 py-3 border-t border-black/40 gap-3"
         style={{ background: '#2a2a2a' }}
@@ -345,6 +345,35 @@ export default function TimelinePane({ state, stats, activeBeat, pendingTempo, p
         >
           Reset
         </button>
+        <a
+          href="https://forms.gle/DeywAS8iCm2FEQhg6"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="rounded-lg py-2.5 px-6 text-sm font-semibold tracking-wide transition-colors"
+          style={{
+            background: 'rgba(139,92,246,0.12)',
+            color: 'rgba(167,139,250,0.8)',
+            border: '1px solid rgba(139,92,246,0.25)',
+            minWidth: 110,
+            maxWidth: 160,
+            textDecoration: 'none',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.background = 'rgba(139,92,246,0.2)';
+            e.currentTarget.style.color = '#a78bfa';
+            e.currentTarget.style.borderColor = 'rgba(139,92,246,0.5)';
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.background = 'rgba(139,92,246,0.12)';
+            e.currentTarget.style.color = 'rgba(167,139,250,0.8)';
+            e.currentTarget.style.borderColor = 'rgba(139,92,246,0.25)';
+          }}
+        >
+          Review ★
+        </a>
         {exportProgress !== null ? (
           <div className="flex items-center gap-2" style={{ minWidth: 110, maxWidth: 160, justifyContent: 'center' }}>
             <div
