@@ -476,9 +476,10 @@ export function getInstrumentCost(instrument, countOwned) {
 export function formatNumber(n) {
   if (n === undefined || n === null) return '0';
   if (n < 1000) return Math.floor(n).toString();
-  if (n < 1_000_000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+  if (n < 1_000_000) return (n / 1_000).toFixed(1).replace(/\.0$/, '') + 'K';
   if (n < 1_000_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
-  return (n / 1_000_000_000).toFixed(1).replace(/\.0$/, '') + 'B';
+  if (n < 1_000_000_000_000) return (n / 1_000_000_000).toFixed(1).replace(/\.0$/, '') + 'B';
+  return (n / 1_000_000_000_000).toFixed(1).replace(/\.0$/, '') + 'T';
 }
 
 // Like formatNumber but preserves up to one decimal place for values under 10,
@@ -487,7 +488,8 @@ export function formatNPS(n) {
   if (n === undefined || n === null) return '0';
   if (n < 10) return parseFloat(n.toFixed(1)).toString();
   if (n < 1000) return Math.floor(n).toString();
-  if (n < 1_000_000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+  if (n < 1_000_000) return (n / 1_000).toFixed(1).replace(/\.0$/, '') + 'K';
   if (n < 1_000_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
-  return (n / 1_000_000_000).toFixed(1).replace(/\.0$/, '') + 'B';
+  if (n < 1_000_000_000_000) return (n / 1_000_000_000).toFixed(1).replace(/\.0$/, '') + 'B';
+  return (n / 1_000_000_000_000).toFixed(1).replace(/\.0$/, '') + 'T';
 }
