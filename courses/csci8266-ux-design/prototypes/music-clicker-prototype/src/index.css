@@ -9,13 +9,23 @@
   box-sizing: border-box;
 }
 
-html, body, #root {
+html {
+  height: 100%;
+  /* iOS Safari: use the actual visible height, not the full viewport */
+  height: -webkit-fill-available;
+  margin: 0;
+  padding: 0;
+}
+
+body, #root {
   height: 100%;
   margin: 0;
   padding: 0;
 }
 
 body {
+  /* iOS Safari fallback: fills only the visible area (excludes browser chrome) */
+  min-height: -webkit-fill-available;
   background: #1a1a1a;
   color: #e2e8f0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',

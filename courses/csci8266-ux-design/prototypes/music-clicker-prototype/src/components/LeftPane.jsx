@@ -296,8 +296,8 @@ export default function TimelinePane({ state, stats, activeBeat, pendingTempo, p
         </div>
       </div>
 
-      {/* Instrument rows panel */}
-      <div className="flex-shrink-0" style={{ background: '#1a1a1a' }}>
+      {/* Instrument rows panel — shrinks on small viewports so footer stays visible */}
+      <div className="flex-shrink overflow-y-auto" style={{ background: '#1a1a1a', minHeight: 0 }}>
         {INSTRUMENTS.map(inst => (
           <InstrumentRow
             key={inst.id}
@@ -315,8 +315,8 @@ export default function TimelinePane({ state, stats, activeBeat, pendingTempo, p
 
       {/* Footer bar: reset, review, export */}
       <div
-        className="flex-shrink-0 flex items-center justify-center px-4 py-3 border-t border-black/40 gap-3"
-        style={{ background: '#2a2a2a' }}
+        className="flex-shrink-0 flex items-center justify-center px-4 border-t border-black/40 gap-3"
+        style={{ background: '#2a2a2a', paddingTop: 12, paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}
       >
         <button
           className="rounded-lg py-2.5 px-6 text-sm font-semibold tracking-wide transition-colors"

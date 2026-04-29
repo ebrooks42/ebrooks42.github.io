@@ -531,7 +531,7 @@ export default function App() {
   }, []);
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: '#1a1a1a' }}>
+    <div className="flex h-full overflow-hidden" style={{ background: '#1a1a1a' }}>
 
       {/* Congratulations modal */}
       {showCongrats && (
