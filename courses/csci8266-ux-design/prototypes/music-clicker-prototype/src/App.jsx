@@ -237,6 +237,17 @@ export default function App() {
   const lastBeatRewardRef = useRef(0);  // timestamp of last beat-edit note reward
   const lastMidiRewardRef = useRef(0);  // timestamp of last MIDI-editor note reward
 
+  // iOS viewport height fix: window.innerHeight is always the true visible height,
+  // unlike 100vh which includes the browser toolbar on iOS Safari/Chrome.
+  useEffect(() => {
+    const setAppHeight = () => {
+      document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`);
+    };
+    setAppHeight();
+    window.addEventListener('resize', setAppHeight);
+    return () => window.removeEventListener('resize', setAppHeight);
+  }, []);
+
   // Initialize driver.js tutorial on mount
   useEffect(() => {
     // Skip if already seen
@@ -531,7 +542,7 @@ export default function App() {
   }, []);
 
   return (
-    <div className="flex h-full overflow-hidden" style={{ background: '#1a1a1a' }}>
+    <div className="flex overflow-hidden" style={{ height: 'var(--app-height, 100vh)', background: '#1a1a1a' }}>
 
       {/* Congratulations modal */}
       {showCongrats && (
