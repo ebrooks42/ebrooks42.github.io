@@ -149,7 +149,7 @@ function InstrumentRow({ instrument, instState, onToggle, onBeatToggle, onOpenMi
                 background: 'rgba(0,0,0,0.12)',
                 borderLeft: '1px solid rgba(0,0,0,0.15)',
                 cursor: 'pointer',
-                color: instState?.midiNotes ? '#c4b5fd' : 'rgba(255,255,255,0.35)',
+                color: instState?.midiNotes ? '#6d28d9' : 'rgba(0,0,0,0.45)',
               }}
               title="Note Editor"
               onClick={(e) => {
