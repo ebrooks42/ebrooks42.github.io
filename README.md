@@ -5,6 +5,7 @@ Evan Brook's personal website built using plain old Markdown for now.
 ## Courses
 
 - [CSCI8266 UX Design](./courses/csci8266-ux-design/README.md)
+- [CSCI8456 Intro to AI](./courses/csci8456-intro-to-ai/README.md)
 
 ## Conference notes
 
