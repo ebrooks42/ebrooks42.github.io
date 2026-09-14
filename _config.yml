@@ -1,3 +1,6 @@
+markdown: kramdown
+kramdown:
+  math_engine: mathjax
 exclude:
   - courses/csci8266-ux-design/prototype-mavlink-course-search/**
   - courses/csci8266-ux-design/prototype-playerspace-home-page/**
