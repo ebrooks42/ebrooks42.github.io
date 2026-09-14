@@ -98,6 +98,7 @@ Original version of these slides were created by Dan Klein and Pieter Abbeel for
 
 > "Sometimes, if the state space is extremely narrow and can 
 > be optimally solved with something like a look up table."
+> 
 > Dr. Lierler
 
 ### Planning agents
