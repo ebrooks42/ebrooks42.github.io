@@ -12,7 +12,7 @@
   - a state space,
   - a successor function (with actions, costs), and
   - a start state and a goal test.
-- A **solution** is a sequence of actions that leads from the start state to a goal state
+- A **solution** is a sequence of actions (aka "plan") that leads from the start state to a goal state
 
 ### Search problems are models
 > What we mean is that search problems can be seen as abstractions of the real problems.
@@ -127,5 +127,3 @@ function Tree-Search (problem, strategy) returns a solution, or failure
   - Exploration strategy
 
 - The main question to address: how do we choose which fringe nodes to expand/explore next?
-
-## Miscellania
