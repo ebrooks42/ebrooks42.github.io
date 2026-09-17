@@ -30,7 +30,9 @@ Based on the above, assuming we have expanded S and S → D, the fringe consists
 - S → E, 
 - S → P
 
-Because we are doing a depth-first search, we will expand the deepest node first, which is S → D → E.
+Because we are doing a depth-first search, we will expand the deepest node first. All of the children of S → D (B, C, and E) are tied in depth (depth = 2), so we need a tiebreaker.
+
+For today, we chose alphabetical order for a tiebreaker, aka (A before B before C etc.), so the next node expanded and explored is S → D → B.
 
 <img src="../../assets/images/depth_first_search_expansion_expanding.png" alt="Depth First Search Expansion Expanding" style="display: block; margin: 0 auto; max-width: 300px; height: auto;"/>
 
