@@ -22,7 +22,7 @@
 
 ### Example: Traveling in Romania
 
-![Romania map](../../assets/images/romania_cities_graph.png)
+<img src="../../assets/images/romania_cities_graph.png" alt="Romania map" style="display: block; margin: 0 auto; max-width: 300px; height: auto;"/>
 
 - State space: cities in Romania
 - Start state: Arad
@@ -60,7 +60,7 @@ For example, consider the world state for Pacman.
   - States for eating all the dots? 120 * 2^30
 
 ### Quiz: Safe passage
-![Pacman maze](../../assets/images/safe_passage_pacman_screenshot.png)
+<img src="../../assets/images/safe_passage_pacman_screenshot.png" alt="Pacman maze" style="display: block; margin: 0 auto; max-width: 300px; height: auto;"/>
 - Problem: Eat all the dots while keeping the ghosts "perma-scared" (aka "frightened") so they don't eat you.
 - What does the state space have to specify in addition to the agent's position and which dots have been eaten?
   - (agent positions, dot booleans, power pellet booleans, remaining 'scared time')
@@ -68,7 +68,7 @@ For example, consider the world state for Pacman.
 
 ### State Space Graphs
 
-![State space graph](../../assets/images/state_space_graph.png)
+<img src="../../assets/images/state_space_graph.png" alt="State space graph" style="display: block; margin: 0 auto; max-width: 300px; height: auto;"/>
 
 - State space graphs: A mathematical representation of a search problem
   - Nodes are abstracted world configurations
@@ -84,7 +84,7 @@ For example, consider the world state for Pacman.
 
 ### Search Trees
 
-![search_trees_example](../../assets/images/search_trees_example.png)
+<img src="../../assets/images/search_trees_example.png" alt="Search Trees Example" style="display: block; margin: 0 auto; max-width: 300px; height: auto;"/>
 
 - A search tree:
   - A "what if" tree of plans and their outcomes

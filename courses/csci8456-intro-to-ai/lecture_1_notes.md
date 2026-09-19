@@ -63,7 +63,7 @@ A better title for this course would be: **Computational Rationality**
 - Characteristics of the **percepts**, **environment**, and **action space (set of valid actions)** dictate
   techniques for selecting rational actions
 
-![Agent model](../../assets/images/agent_sensors_actuators_model.png)
+<img src="../../assets/images/agent_sensors_actuators_model.png" alt="Agent model" style="display: block; margin: 0 auto; max-width: 300px; height: auto;"/>
 
 - Starting with simple, single agents with full understanding of the environment
 - Ending with environments with multiple agents, agents without full understanding of the environment, and

@@ -36,13 +36,13 @@ All of these search algorithms thus far are the same except for fringe strategie
 - Greedy search follows the heuristic to go "straigth to the goal" by using the heuristic as a tie breaker
 - Expand the node that seems the closest
 
-![greedy_search_expansion_order](../../assets/images/greedy_search_expansion_order.png)
+<img src="../../assets/images/greedy_search_expansion_order.png" alt="Greedy Search Expansion Order" style="display: block; margin: 0 auto; max-width: 300px; height: auto;"/>
 
 - What can go wrong? 
     - Best-first takes staright 
     - Worst case: like a badly guided DFS
 
-![greedy_search_cartoon](../../assets/images/greedy_search_cartoon.png)
+<img src="../../assets/images/greedy_search_cartoon.png" alt="Greedy Search Cartoon" style="display: block; margin: 0 auto; max-width: 300px; height: auto;"/>
 
 > Uniform cost binds itself to _optimality_, so it only considers the cheapest possible path at any moment. Greedy search binds itself to the _closest_ next state at any given moment. 
 

@@ -133,7 +133,7 @@ And we will expand the shallowest node first, which is S → E.
 - Fringe: Stored as a priority queue (priority = cumulative cost)
 - Visualization: Cost "contours" like on a topo map
 
-![cost_contours_search_tree_expansion](../../assets/images/cost_contours_search_tree_expansion.png)
+<img src="../../assets/images/cost_contours_search_tree_expansion.png" alt="Cost Contours Search Tree Expansion" style="display: block; margin: 0 auto; max-width: 300px; height: auto;"/>
 
 ## Uniform Cost Search (UCS) Properties
 - What nodes does UCS expand?
@@ -147,4 +147,4 @@ And we will expand the shallowest node first, which is S → E.
 - Is it optimal?
     - Yes (Proof next lecture via A*)
 
-![uniform_cost_search_tree_cartoon](../../assets/images/uniform_cost_search_tree_cartoon.png)
+<img src="../../assets/images/uniform_cost_search_tree_cartoon.png" alt="Uniform Cost Search Tree Cartoon" style="display: block; margin: 0 auto; max-width: 300px; height: auto;"/>
