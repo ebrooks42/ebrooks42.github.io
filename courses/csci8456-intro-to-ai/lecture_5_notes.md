@@ -67,8 +67,8 @@ All of these search algorithms thus far are the same except for fringe strategie
 - Inadmissible heuristics break optimality by trapping good plans on the fringe
 
 - A heuristic is admissible (optimistic) if: 
-$$0 <= h(n) <= h*(n)$$
-where h*(n) is the true cost to a nearest goal
+$$0 \le h(n) \le h^*(n)$$
+where $h^*(n)$ is the true cost to a nearest goal
 
 - Coming up with admissible heuristics is most of what's involved with using A* in practice
 

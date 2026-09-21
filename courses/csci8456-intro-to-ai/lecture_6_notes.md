@@ -25,12 +25,12 @@ Proof:
     2. Reminder: $f(n) = g(n) + h(n)$ (backwards cost aka path cost + forwards cost aka heuristic cost)
     3. What we know: 
         - $g(A) = f(A)$ (because admissible heuristics MUST be 0 at the goal state))
-        - $f(n) <= g(A)$
+        - $f(n) \le g(A)$
     4. Thus we know that $f(A) < f(B)$
     5. Therefore, $n$ expands before $B$
 - Therefore, all ancestors of $A$ must expand before $B$
 - Therefore, $A$ expands before $B$
-- Therefore $A*$ search is optimal 
+- Therefore $A^*$ search is optimal 
 
 ### Properties of A*
 
@@ -74,12 +74,12 @@ Proof:
 
 - Heuristic option 1: Number of tiles currently misplaced
     - Why is it admissible?
-    - $h(start) = 8$
+    - $h(\text{start}) = 8$
     - This is a relaxed-problem heuristic, because you can't take all the tiles out and put them back in order. 
 - Heuristic option 2: What if we had an easier 8-puzzle where any tile could slide any direction at any time, ignoring other tiles?
     - Calculating the total _Manhattan distance_ across ALL tiles from their final destination
     - Why is it admissible?
-    - $h(start) = 3 + 1 + 2 + ... = 18
+    - $h(\text{start}) = 3 + 1 + 2 + \ldots = 18$
 - How about using the actual cost as a heuristic?
     - Would it be admissible? YES
     - Would we save on nodes expanded? Yes, AFTER we have computed the solution the hard way
@@ -97,14 +97,14 @@ Heuristics compared:
     - As heuristics get closer to the true cost, you will expand fewer nodes but usually do more work per node to copute the heuristic itself
 
 ### Trivial heuristics, Dominance
-- Dominance: $h_a >= h_c$, if 
+- Dominance: $h_a \ge h_c$, if 
 
-$$$
-forall{n}: h_a(n) >= h_c(n)
-$$$
+$$
+\forall n: h_a(n) \ge h_c(n)
+$$
 
 - Heuristics form a semi-lattic:
-    - Max of admissible heuristics is itself admissible: $h(n) = max(h_a(n), h_b(n))$
+    - Max of admissible heuristics is itself admissible: $h(n) = \max(h_a(n), h_b(n))$
 
 - Trivial heuristics:
     - bottom of lattice is the zero heuristic (gives us uniform cost search)
@@ -123,11 +123,11 @@ $$$
     - Otherwise, expand it and if not the goal put it in the closed set
 
 ### Consistency of heuristics
-- Main idea: estimated heuristics costs $<=$ actual costs
-    - Admissibility: heuristic cost $<=$ actual cost to goal
-    - Consistency: heuristic "arc" costs $<=$ actual cost for each arc
+- Main idea: estimated heuristics costs $\le$ actual costs
+    - Admissibility: heuristic cost $\le$ actual cost to goal
+    - Consistency: heuristic "arc" costs $\le$ actual cost for each arc
 - Consequences of consistency:
-    - The $f$ value along a path never decreases: $h(A) <= cost(A to C) + h(C)
+    - The $f$ value along a path never decreases: $h(A) \le \text{cost}(A \to C) + h(C)$
 - When heuristic is both admissible and consistency, then A* graph search is optimal
 
 <img src="../../assets/images/heuristic_consistency_diagram.png" alt="Heuristic Consistency Diagram" style="display: block; margin: 0 auto; max-width: 300px; height: auto;"/>
