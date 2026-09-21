@@ -9,7 +9,7 @@
 ### Optimality proof for A* search
 Assume:
 - A is an optimal goal node
-- B is a suboptimal goal noder
+- B is a suboptimal goal node
 - h is admissible
 
 Claim:
@@ -21,13 +21,13 @@ Proof:
 - Imagine $B$ is on the fringe
 - Some ancestor $n$ of $A$ is on the fringe, too (maybe $A$)
 - Claim: $n$ will be expanded before $B$
-    1. $f(n)$ is less or equal to $f(A)$ (because it is an ancestor of A)
+    1. $f(n) \le f(A)$ (because $n$ is an ancestor of $A$ and $h$ is admissible)
     2. Reminder: $f(n) = g(n) + h(n)$ (backwards cost aka path cost + forwards cost aka heuristic cost)
     3. What we know: 
-        - $g(A) = f(A)$ (because admissible heuristics MUST be 0 at the goal state))
-        - $f(n) \le g(A)$
-    4. Thus we know that $f(A) < f(B)$
-    5. Therefore, $n$ expands before $B$
+        - $g(A) = f(A)$ (because admissible heuristics MUST be 0 at the goal state)
+        - $f(n) \le g(A)$ (because $h$ never overestimates the remaining cost from $n$ to $A$)
+    4. Also, $f(A) < f(B)$: $B$ is suboptimal, so $g(A) < g(B)$, and $f(B) = g(B)$ because $h(B) = 0$
+    5. Thus $f(n) \le f(A) < f(B)$, therefore $n$ expands before $B$
 - Therefore, all ancestors of $A$ must expand before $B$
 - Therefore, $A$ expands before $B$
 - Therefore $A^*$ search is optimal 
@@ -103,7 +103,7 @@ $$
 \forall n: h_a(n) \ge h_c(n)
 $$
 
-- Heuristics form a semi-lattic:
+- Heuristics form a semi-lattice:
     - Max of admissible heuristics is itself admissible: $h(n) = \max(h_a(n), h_b(n))$
 
 - Trivial heuristics:
@@ -128,22 +128,22 @@ $$
     - Consistency: heuristic "arc" costs $\le$ actual cost for each arc
 - Consequences of consistency:
     - The $f$ value along a path never decreases: $h(A) \le \text{cost}(A \to C) + h(C)$
-- When heuristic is both admissible and consistency, then A* graph search is optimal
+- When heuristic is both admissible and consistent, then A* graph search is optimal
 
 <img src="../../assets/images/heuristic_consistency_diagram.png" alt="Heuristic Consistency Diagram" style="display: block; margin: 0 auto; max-width: 300px; height: auto;"/>
 
 ### Optimality of A* Graph search
 - Sketch: consider what A* does with a consistent heuristic
     - In tree search, A* expands nodes in increasing total f-value (f-contours)
-    - Proof idea: the optimal goal(s) have the 
+    - Proof idea: the optimal goal(s) have a lower f-value than the suboptimal ones, so they get expanded first
 
 Proof:
     - Assume some n on path to G* isn't in queue when we need it, because some worse n' for the same state dequeued and expanded first
     - Take the highest such n in the tree
     - Let p be the ancestor of n that was on the queue when n' was popped
-    - $f(p) < f(n)$ because of consistency
-    - $f(n) < f(n')$ by construction (we claimed $n'$ is suboptimal)
-    - Then, $f(p) < f(n) < f(n')$, so $f(p) < f(n)$ and $p$ _would have been expanded before_ $n'$
+    - $f(p) \le f(n)$ because of consistency ($f$ never decreases along a path)
+    - $f(n) < f(n')$ because $n'$ is suboptimal (it reaches the same state at a higher cost than $n$)
+    - Then, $f(p) \le f(n) < f(n')$, so $f(p) < f(n')$ and $p$ _would have been expanded before_ $n'$
     - Thus, we have a contradiction!
 
 <img src="../../assets/images/optimality_of_a_star_graph_search.png" alt="Optimality Of A Star Graph Search Proof" style="display: block; margin: 0 auto; max-width: 300px; height: auto;"/>
