@@ -1,4 +1,4 @@
-# Lecture #10 Notes - Filtering and Ordering
+# Lecture #10 Notes - Local Search
 - Author: Evan Brooks
 - Date: Monday, October 5th, 2026
 

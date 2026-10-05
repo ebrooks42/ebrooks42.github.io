@@ -1,4 +1,4 @@
-# Lecture #7 Notes - Varieties of CSPs and Constraints
+# Lecture #8 Notes - Varieties of CSPs and Constraints
 - Author: Evan Brooks
 - Date: Monday, September 28th, 2026
 
