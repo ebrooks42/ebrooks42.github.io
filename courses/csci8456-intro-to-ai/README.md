@@ -10,6 +10,8 @@
 - [Lecture 6 notes (September 21st, 2026)](./lecture_6_notes.md)
 - [Lecture 7 notes (September 23rd, 2026)](./lecture_7_notes.md)
 - [Lecture 8 notes (September 28th, 2026)](./lecture_8_notes.md)
+- [Lecture 9 notes (September 30th, 2026)](./lecture_9_notes.md)
+- [Lecture 10 notes (October 5th, 2026)](./lecture_10_notes.md)
 
 ## Assignments
 
