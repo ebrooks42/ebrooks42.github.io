@@ -1,6 +1,6 @@
 # Lecture #13 Notes - Adversarial Search
 - Author: Evan Brooks
-- Date: Wednesday, October 26th, 2026
+- Date: Monday, October 26th, 2026
 
 ## Evaluation Functions
 - Evaluation functions score non-terminals in depth-limited search
