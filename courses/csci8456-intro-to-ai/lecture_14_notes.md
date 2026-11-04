@@ -18,12 +18,12 @@ Idea: Uncertain outcomes controlled by chance, not by a perfect adversary. We ca
     - What we take to be a rational agent
 
 ## Probabilities recap
-- A *random variable* resprecnts an outcome whos outcome is unknown
-- A *probability distribution* is an assignment ofweights to outcomes
+- A *random variable* represents an outcome whose value is unknown
+- A *probability distribution* is an assignment of weights to outcomes
 
 - Example: traffic on freeway
-  - Random varaible: $T = \text{is traffic}$
-  - Outcomes: $T \isin \{none, light, heavy\}$
+  - Random variable: $T = \text{is traffic}$
+  - Outcomes: $T \in \{none, light, heavy\}$
   - Distribution: $P(T=none) = 0.25, P(T=light) = 0.50, P(T=heavy) = 0.25$
 
 - Some laws:
@@ -59,7 +59,7 @@ Idea: Uncertain outcomes controlled by chance, not by a perfect adversary. We ca
   - Suppose you rob a local bank
   - You recruit Keith, and succeed
   - The police stops you and the suitcase is discovered worth $1 million
-  - Without witnesses and without a confession, the police can convict you and your friend ONLY of the lesser offence of possessing stolen property (1 year)
+  - Without witnesses and without a confession, the police can convict you and your friend ONLY of the lesser offense of possessing stolen property (1 year)
   - With a _confession_, you/your friend will get the heavier offense and more time 
   - If you fess up/witness against the other, the first is released free of charge and the second takes all the blame (6 years in prison)
 
@@ -72,10 +72,10 @@ Best outcome is for you and Keith to be silent, but you cannot coordinate. Not k
   - Probability that Keith turns witness is $P$ (not turning witness is thus $1 - P$), and hence:
     - Expected utility of _turning witness_ = $ -3P + 0(1-P) = -3 * P$
     - Expected utility of _not turning witness_ = $-6P-1(1-P) = -6 * P$
-  - No matter what the probability P that Keith turns witness you are _always_ better off by turning withness yourself
+  - No matter what the probability P that Keith turns witness you are _always_ better off by turning witness yourself
 
-- Modelled as utility theory - where Keith's outcome is just as bad as your years in prison (aka totaly years in prison)
-  - The utility is $-(N + M)$ where $N$ is your years in prison and $M$ is Keith's year in prison
+- Modelled as utility theory - where Keith's outcome is just as bad as your years in prison (aka total years in prison)
+  - The utility is $-(N + M)$ where $N$ is your years in prison and $M$ is Keith's years in prison
   - Probability of Keith turning witness is $P$, and not turning witness is $1-P$
     - Utility of _turning witness_: $-6*P - 6(1-P) = -6$
     - Utility of _not turning witness_: $-6*P - 2(1-P) = -2 - 4P$
@@ -88,8 +88,8 @@ Best outcome is for you and Keith to be silent, but you cannot coordinate. Not k
 - Values should now reflect average-case (expectimax) outcomes, not worst case (minimax) outcomes
 - Expectimax search: compute the average score under optimal play
   - Max nodes as in minimax search
-  - Changes nodes are like min nodes, but the outcome is certain
+  - Chance nodes are like min nodes, but the outcome is uncertain
   - Calculate their _expected utilities_
-  - i.e. take weigthed average (expectation) of children and select next action based on highest expectation
+  - i.e. take weighted average (expectation) of children and select next action based on highest expectation
 
   <img src="../../assets/images/expectimax_pseudocode.png" alt="Expectimax Pseudocode" style="display: block; margin: 0 auto; max-width: 300px; height: auto;"/>
