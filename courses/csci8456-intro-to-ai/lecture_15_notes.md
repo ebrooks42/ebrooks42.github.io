@@ -7,7 +7,7 @@
 ### session 1
 synchronous - process that must proceed stepwise 
 
-perserverance - character trait defined by resilience and commitment to completing a task, even in the face of issues
+perseverance - character trait defined by resilience and commitment to completing a task, even in the face of issues
 
 related words: consistency
 
@@ -16,7 +16,7 @@ related words: consistency
 
 Room 2 notes:
 
-perserverance - character trait defined by resilience and commitment to completing a task, even in the face of issues
+perseverance - character trait defined by resilience and commitment to completing a task, even in the face of issues
 
 related words: consistency
 
@@ -30,13 +30,13 @@ related words: organization, rules, form
   - If you know the bounds of the outcomes, you can prune expectimax trees in a similar way to minimax trees by computing the "best case" and "worst case" outcomes of the chance nodes, and using those to determine if a subtree can be pruned
 
 ## Depth-limited expectimax
-![depth_limited_expectimax](../../assets/images/depth_limited_expectimax.png)
+<img src="../../assets/images/depth_limited_expectimax.png" alt="Depth-limited expectimax" style="display: block; margin: 0 auto; max-width: 300px; height: auto;"/>
 
 ## What probabilities to use?
-- In expectimax search, we have a aprobabilistic mocdel of how the opponent. (O environment) will behave in any state
+- In expectimax search, we have a probabilistic model of how the opponent (or environment) will behave in any state
   - Model could be a simple uniform distribution over all legal moves
   - Model could be sophisticated and require a great deal of computation
-  - We havea a chance node for any outcome out of our control: opponent or environment
+  - We have a chance node for any outcome out of our control: opponent or environment
   - The model might say that adversarial actions are likely
 - For now, assume each chance node magically comes along with probabilities that specify the distribution over its outcomes
 - Modelling assumptions matter!
@@ -46,5 +46,5 @@ related words: organization, rules, form
   - Dangerous pessimism: assume adversary when the world is random
 
 ## Assumptions vs. Reality
-![assumption_vs_reality_expectimax_vs_minimax](../../assets/images/assumption_vs_reality_expectimax_vs_minimax.png)
+<img src="../../assets/images/assumption_vs_reality_expectimax_vs_minimax.png" alt="Assumptions vs. reality: expectimax vs. minimax" style="display: block; margin: 0 auto; max-width: 300px; height: auto;"/>
 
