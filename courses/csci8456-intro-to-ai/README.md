@@ -19,6 +19,8 @@
 - [Lecture 16 notes (November 4th, 2026)](./lecture_16_notes.md)
 - [Lecture 17 notes (November 9th, 2026)](./lecture_17_notes.md)
 - [Lecture 18 notes (November 11th, 2026)](./lecture_18_notes.md)
+- [Lecture 19 notes (November 16th, 2026)](./lecture_19_notes.md)
+- [Lecture 20 notes (November 23rd, 2026)](./lecture_20_notes.md)
 
 ## Assignments
 
